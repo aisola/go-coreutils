@@ -5,16 +5,30 @@ import "fmt"
 import "flag"
 import "strings"
 
+const version_text = `
+    echo (go-coreutils) 0.1
+
+    Copyright (C) 2014 Abram C. Isola.
+    This program comes with ABSOLUTELY NO WARRANTY; for details see
+    LICENSE. This is free software, and you are welcome to redistribute 
+    it under certain conditions in LICENSE.
+`
+
 func usage() {
 	fmt.Fprintln(os.Stderr, "Usage: echo [options] [string ...]")
 }
 
-var enableEscapeChars = flag.Bool("e", false, "Enable escape characters")
-var omitNewline = flag.Bool("n", false, "Don't print trailing newline")
-var disableEscapeChars = flag.Bool("E", true, "Disable escape characters")
-
 func main() {
+	enableEscapeChars := flag.Bool("e", false, "Enable escape characters")
+	omitNewline := flag.Bool("n", false, "Don't print trailing newline")
+	disableEscapeChars := flag.Bool("E", true, "Disable escape characters")
+	version := flag.Bool("version", false, version_text)
 	flag.Parse()
+
+	if *version {
+		fmt.Println(version_text)
+		os.Exit(0)
+	}
 
 	concatenated := strings.Join(flag.Args(), " ")
 

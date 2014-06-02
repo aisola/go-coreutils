@@ -4,12 +4,22 @@ package main
 import "bufio"
 import "bytes"
 import "fmt"
+import "flag"
 import "io/ioutil"
+import "os"
 import "strconv"
 import "strings"
 import "syscall"
 import "time"
 
+const version_text = `
+    uptime (go-coreutils) 0.1
+
+    Copyright (C) 2014 Abram C. Isola.
+    This program comes with ABSOLUTELY NO WARRANTY; for details see
+    LICENSE. This is free software, and you are welcome to redistribute 
+    it under certain conditions in LICENSE.
+`
 
 type Load struct {
 	L1, L5, L15 float64
@@ -75,6 +85,14 @@ func (self *Uptime) Format() string {
 func Users() int { return 0 }
 
 func main() {
+	version := flag.Bool("version", false, version_text)
+	flag.Parse()
+    
+    if *version {
+		fmt.Println(version_text)
+		os.Exit(0)
+	}
+    
 	up := Uptime{}
 	up.Get()
 	load := Load{}

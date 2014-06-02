@@ -7,11 +7,19 @@ import "io"
 import "net"
 import "os"
 
+const version_text = `
+    cat (go-coreutils) 0.1
+
+    Copyright (C) 2014 Abram C. Isola.
+    This program comes with ABSOLUTELY NO WARRANTY; for details see
+    LICENSE. This is free software, and you are welcome to redistribute 
+    it under certain conditions in LICENSE.
+`
+
 var (
 	countNonBlank     = flag.Bool("b", false, "Number the non-blank output lines, starting at 1.")
 	numberOutput      = flag.Bool("n", false, "Number the output lines, starting at 1.")
-	squeezeEmptyLines = flag.Bool("s", false,
-		"Squeeze multiple adjacent empty lines, causing the output to be single spaced.")
+	squeezeEmptyLines = flag.Bool("s", false, "Squeeze multiple adjacent empty lines, causing the output to be single spaced.")
 )
 
 func openFile(s string) (io.ReadWriteCloser, error) {
@@ -51,11 +59,19 @@ func dumpLines(w io.Writer, r io.Reader) (n int64, err error) {
 }
 
 func main() {
+	version := flag.Bool("version", false, version_text)
 	flag.Parse()
+
+	if *version {
+		fmt.Println(version_text)
+		os.Exit(0)
+	}
+
 	rcopy := io.Copy
 	if *countNonBlank || *numberOutput || *squeezeEmptyLines {
 		rcopy = dumpLines
 	}
+
 	for _, fname := range flag.Args() {
 		if fname == "-" {
 			rcopy(os.Stdout, os.Stdin)
@@ -69,4 +85,5 @@ func main() {
 			f.Close()
 		}
 	}
+
 }
