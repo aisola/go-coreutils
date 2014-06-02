@@ -1,0 +1,4 @@
+*.exe
+*.py
+.deps
+make
