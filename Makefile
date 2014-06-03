@@ -40,3 +40,4 @@ fmt:
 
 clean:
 	rm -f cat echo exit false logname mv pwd rm sleep uptime whoami
+	rm -f gocat goecho goexit gofalse gologname gomv gopwd gorm gosleep gouptime gowhoami
