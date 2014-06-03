@@ -26,6 +26,6 @@ fmt:
 	go fmt whoami.go
 
 clean:
-	./rm -f cat echo exit false logname mv pwd rm sleep uptime whoami
-	./rm -f *.exe
-	./rm -f .deps
+	rm -f cat echo exit false logname mv pwd rm sleep uptime whoami
+	rm -f *.exe
+	rm -f .deps
