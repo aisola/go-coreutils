@@ -18,8 +18,8 @@ mkdir
 mkfifo
 mknod
 mktemp
-mv
-rm
+*mv
+*rm
 rmdir
 shred
 sync
