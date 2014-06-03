@@ -74,7 +74,7 @@ groups
 hostid
 id
 link
-logname
+*logname
 nice
 nohup
 pathchk
@@ -101,4 +101,3 @@ users
 who
 *whoami
 yes
-
