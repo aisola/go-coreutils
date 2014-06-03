@@ -1,7 +1,9 @@
 GO-Coreutils
 ------------
-This is a Go1 implimentation of the GNU Coreutils. In general, as the commands were made for linux, 
-even though the sources are written in Go1, they may not all be cross-platform.
+This is a Go1 implimentation of the GNU Coreutils.
+
+I guess the ironic thing is that they have been greatly developed using my Windows7 laptop. However, 
+they have been tested in Linux Mint 15. So, we know they work.
 
 ### Installation
 
@@ -9,13 +11,11 @@ via goget...
 
     $ go get github.com/aisola/go-coreutils
     $ cd $GOPATH/src/github.com/aisola/go-coreutils
-    $ python make build
     
 via git...
 
     $ git clone https://github.com/aisola/go-coreutils.git
     $ cd go-coreutils
-    $ python make build
 
 ### Legal
 go-coreutils 0.1 is licensed under the GNU General Public License v3.
