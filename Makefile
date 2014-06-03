@@ -1,16 +1,29 @@
 
 all:
-	go build cat.go
-	go build echo.go
-	go build exit.go
-	go build false.go
-	go build logname.go
-	go build mv.go
-	go build pwd.go
-	go build rm.go
-	go build sleep.go
-	go build uptime.go
-	go build whoami.go
+	go build -o cat cat.go
+	go build -o echo echo.go
+	go build -o exit exit.go
+	go build -o flase false.go
+	go build -o logname logname.go
+	go build -o mv mv.go
+	go build -o pwd pwd.go
+	go build -o rm rm.go
+	go build -o sleep sleep.go
+	go build -o uptime uptime.go
+	go build -o whoami whoami.go
+
+gobuild:
+	go build -o gocat cat.go
+	go build -o goecho echo.go
+	go build -o goexit exit.go
+	go build -o gofalse false.go
+	go build -o gologname logname.go
+	go build -o gomv mv.go
+	go build -o gopwd pwd.go
+	go build -o gorm rm.go
+	go build -o gosleep sleep.go
+	go build -o gouptime uptime.go
+	go build -o gowhoami whoami.go
 
 fmt:
 	go fmt cat.go
@@ -27,5 +40,3 @@ fmt:
 
 clean:
 	rm -f cat echo exit false logname mv pwd rm sleep uptime whoami
-	rm -f *.exe
-	rm -f .deps
