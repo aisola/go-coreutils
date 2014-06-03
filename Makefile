@@ -3,7 +3,7 @@ all:
 	go build -o cat cat.go
 	go build -o echo echo.go
 	go build -o exit exit.go
-	go build -o flase false.go
+	go build -o false false.go
 	go build -o logname logname.go
 	go build -o mv mv.go
 	go build -o pwd pwd.go
