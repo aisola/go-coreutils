@@ -1,3 +1,7 @@
+//
+// pwd.go (go-coreutils) 0.1
+// Copyright (C) 2014, Abram C. Isola.
+//
 package main
 
 import "fmt"
