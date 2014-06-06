@@ -9,6 +9,7 @@ all {
 	go build -o pwd pwd.go;
 	go build -o rm rm.go;
 	go build -o sleep sleep.go;
+	go build -o stat stat.go;
 	go build -o uptime uptime.go;
 	go build -o whoami whoami.go;
 }
@@ -23,6 +24,7 @@ gobuild {
 	go build -o gopwd pwd.go;
 	go build -o gorm rm.go;
 	go build -o gosleep sleep.go;
+	go build -o gostat stat.go;
 	go build -o gouptime uptime.go;
 	go build -o gowhoami whoami.go;
 }
@@ -37,11 +39,12 @@ fmt {
 	go fmt pwd.go;
 	go fmt rm.go;
 	go fmt sleep.go;
+	go fmt stat.go;
 	go fmt uptime.go;
 	go fmt whoami.go;
 }
 
 clean {
-	rm -f cat echo exit false logname mv pwd rm sleep uptime whoami;
-	rm -f gocat goecho goexit gofalse gologname gomv gopwd gorm gosleep gouptime gowhoami;
+	rm -f cat echo exit false logname mv pwd rm sleep stat uptime whoami;
+	rm -f gocat goecho goexit gofalse gologname gomv gopwd gorm gosleep stat gouptime gowhoami;
 }
