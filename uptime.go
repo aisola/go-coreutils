@@ -4,7 +4,6 @@
 //
 package main
 
-
 import "bufio"
 import "bytes"
 import "fmt"
@@ -91,12 +90,12 @@ func Users() int { return 0 }
 func main() {
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()
-    
-    if *version {
+
+	if *version {
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
-    
+
 	up := Uptime{}
 	up.Get()
 	load := Load{}

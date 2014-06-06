@@ -36,68 +36,68 @@ var f1 = flag.Bool("f", false, "remove existing destination files and never prom
 var f2 = flag.Bool("force", false, "remove existing destination files and never prompt the user")
 
 func input(prompt string) string {
-    fmt.Print(prompt)
-    
-	reader        := bufio.NewReader(os.Stdin)
-	userinput, _  := reader.ReadString([]byte("\n")[0])
-	
+	fmt.Print(prompt)
+
+	reader := bufio.NewReader(os.Stdin)
+	userinput, _ := reader.ReadString([]byte("\n")[0])
+
 	return userinput
 }
 
 func fileExists(filep string) os.FileInfo {
-    fp, err := os.Stat(filep)
-    if err != nil && os.IsNotExist(err) {
-        return nil
-    }
-    return fp 
+	fp, err := os.Stat(filep)
+	if err != nil && os.IsNotExist(err) {
+		return nil
+	}
+	return fp
 }
 
 func mover(oldp, newp string) {
-    
-        if fp := fileExists(newp); fp!=nil && !*f1 && !*f2 {
-            
-            if fp.IsDir() {
-                
-                base := filepath.Base(oldp)
-                
-                if fp2 := fileExists(newp+"/"+base); fp2!=nil && !*f1 && !*f2 {
-                    
-                    ans := input("File '"+newp+"/"+base+"' exists. Overwrite? (y/N): ")
-                    if ans == "y" {
-                        os.Rename(oldp, newp+"/"+base)
-                    } else {
-                        os.Exit(1)
-                    }
-                    
-                } else if fp2 != nil && (*f1 || *f2) {
-                    
-                    os.Rename(oldp, newp+"/"+base)
-                    
-                } else if fp2 == nil {
-                    
-                    os.Rename(oldp, newp+"/"+base)
-                    
-                }
-                
-            } else {
-            
-                ans := input("File '"+newp+"' exists. Overwrite? (y/N): ")
-                if ans == "y" {
-                    os.Rename(oldp, newp)
-                } else {
-                    os.Exit(1)
-                }
-            }
-            
-        } else if fp!=nil && (*f1 || *f2) {
-            
-            os.Rename(oldp, newp)
-            
-        } else if fp == nil {
-            
-            os.Rename(oldp, newp)
-            
-        }
+
+	if fp := fileExists(newp); fp != nil && !*f1 && !*f2 {
+
+		if fp.IsDir() {
+
+			base := filepath.Base(oldp)
+
+			if fp2 := fileExists(newp + "/" + base); fp2 != nil && !*f1 && !*f2 {
+
+				ans := input("File '" + newp + "/" + base + "' exists. Overwrite? (y/N): ")
+				if ans == "y" {
+					os.Rename(oldp, newp+"/"+base)
+				} else {
+					os.Exit(1)
+				}
+
+			} else if fp2 != nil && (*f1 || *f2) {
+
+				os.Rename(oldp, newp+"/"+base)
+
+			} else if fp2 == nil {
+
+				os.Rename(oldp, newp+"/"+base)
+
+			}
+
+		} else {
+
+			ans := input("File '" + newp + "' exists. Overwrite? (y/N): ")
+			if ans == "y" {
+				os.Rename(oldp, newp)
+			} else {
+				os.Exit(1)
+			}
+		}
+
+	} else if fp != nil && (*f1 || *f2) {
+
+		os.Rename(oldp, newp)
+
+	} else if fp == nil {
+
+		os.Rename(oldp, newp)
+
+	}
 }
 
 func main() {
@@ -116,31 +116,31 @@ func main() {
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
-    
-    files := flag.Args()
-    
-    if len(files) == 2 {
-        mover(files[0], files[1])
-        os.Exit(0)
-    } else if len(files) < 1 {
-        fmt.Println("mv: destination required")
-        os.Exit(1)
-    } else {
-        
-        to_file, files := files[len(files)-1], files[:len(files)-1]
-        
-        if fp := fileExists(to_file); fp == nil || !fp.IsDir() {
-            fmt.Println("mv: when moving multiple files, last argument must be a directory")
-            os.Exit(1)
-        } else {
-        
-            fmt.Println(files)
-            for i:=0;i<len(files);i++ {
-                mover(files[i], to_file)
-            }
-            os.Exit(0)
-            
-        }
-        
-    }
+
+	files := flag.Args()
+
+	if len(files) == 2 {
+		mover(files[0], files[1])
+		os.Exit(0)
+	} else if len(files) < 1 {
+		fmt.Println("mv: destination required")
+		os.Exit(1)
+	} else {
+
+		to_file, files := files[len(files)-1], files[:len(files)-1]
+
+		if fp := fileExists(to_file); fp == nil || !fp.IsDir() {
+			fmt.Println("mv: when moving multiple files, last argument must be a directory")
+			os.Exit(1)
+		} else {
+
+			fmt.Println(files)
+			for i := 0; i < len(files); i++ {
+				mover(files[i], to_file)
+			}
+			os.Exit(0)
+
+		}
+
+	}
 }
