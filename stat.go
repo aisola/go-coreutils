@@ -51,34 +51,42 @@ func main() {
 		os.Exit(0)
 	}
     
-    file := flag.Args()[0]
+    files := flag.Args()
     
-    fi, _ := os.Stat(file)
-    
-    var ftype string
-    if fi.IsDir() {
-        ftype = "directory"
-    } else {
-        ftype = "regular file"
+    for i:=0;i<len(files);i++ {
+        fi, err := os.Stat(files[i])
+        if err != nil {
+            fmt.Printf("stat: fatal: could not open '%s': %s", files[i], err)
+        }
+        
+        // get type
+        var ftype string
+        if fi.IsDir() {
+            ftype = "directory"
+        } else {
+            ftype = "regular file"
+        }
+        
+        // get all file information
+        sys := fi.Sys().(*syscall.Stat_t)
+        
+        // get user information
+        usr, err := user.LookupId(fmt.Sprintf("%d", sys.Uid))
+        if err != nil {
+            fmt.Println(err)
+        }
+        
+        // TODO: Gid
+        fmt.Printf("  File: '%s'\n", fi.Name())
+        fmt.Printf("  Size: %-12d Blocks: %-8d IO Block: %d %s\n", fi.Size(), sys.Blocks, sys.Blksize, ftype)
+        
+        // device, inode, links, permissions, uid, gid
+        fmt.Printf("Device: %-12s Inode : %-8d Links: %d\n", fmt.Sprintf("%Xh/%dd", sys.Dev, sys.Dev), sys.Ino, sys.Nlink)
+        fmt.Printf("Access: %s Uid: %s Gid: %d\n", fmt.Sprintf("(%#o/%s)",fi.Mode().Perm(),fi.Mode()), fmt.Sprintf("( %d/ %s)", sys.Uid, usr.Username), sys.Gid)
+        
+        // print out times
+        fmt.Printf("Access: %s\n", timespecToTime(sys.Atim))
+        fmt.Printf("Modify: %s\n", timespecToTime(sys.Mtim))
+        fmt.Printf("Change: %s\n", timespecToTime(sys.Ctim))
     }
-    
-    sys := fi.Sys().(*syscall.Stat_t)
-    
-    usr, err := user.LookupId(fmt.Sprintf("%d", sys.Uid))
-    if err != nil {
-        fmt.Println(err)
-    }
-    
-    // TODO: Device, Gid
-    fmt.Printf("  File: '%s'\n", fi.Name())
-    fmt.Printf("  Size: %-12d Blocks: %-8d IO Block: %d %s\n", fi.Size(), sys.Blocks, sys.Blksize, ftype)
-    
-    // device, inode, links, permissions, uid, gid
-    fmt.Printf("Device: %-12d Inode : %-8d Links: %d\n", sys.Dev, sys.Ino, sys.Nlink)
-    fmt.Printf("Access: (%s) Uid: %s Gid: %d\n", fi.Mode(), fmt.Sprintf("( %d/ %s)", sys.Uid, usr.Username), sys.Gid)
-    
-    // print out times
-    fmt.Printf("Access: %s\n", timespecToTime(sys.Atim))
-    fmt.Printf("Modify: %s\n", timespecToTime(sys.Mtim))
-    fmt.Printf("Change: %s\n", timespecToTime(sys.Ctim))
 }
