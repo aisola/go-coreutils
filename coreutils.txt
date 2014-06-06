@@ -86,7 +86,7 @@ readlink
 runcon
 seq
 *sleep
-stat
+*stat
 stty
 su
 tee
