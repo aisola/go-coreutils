@@ -7,6 +7,9 @@ package main
 import "flag"
 import "fmt"
 import "os"
+import "os/user"
+import "syscall"
+import "time"
 
 const (
 	help_text string = `
@@ -29,6 +32,10 @@ const (
 `
 )
 
+func timespecToTime(ts syscall.Timespec) time.Time {
+    return time.Unix(int64(ts.Sec), int64(ts.Nsec))
+}
+
 func main() {
 	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
@@ -48,20 +55,30 @@ func main() {
     
     fi, _ := os.Stat(file)
     
-    // var ftype string
-    // if fi.IsDir() {
-    //     ftype = "directory"
-    // } else {
-    //     ftype = "regular file"
-    // }
+    var ftype string
+    if fi.IsDir() {
+        ftype = "directory"
+    } else {
+        ftype = "regular file"
+    }
     
-    // NEED: directory/file, Device, Blocks, IO Block, Inode, Links, Access (hex), Uid, Gid, Access Date
+    sys := fi.Sys().(*syscall.Stat_t)
+    
+    usr, err := user.LookupId(fmt.Sprintf("%d", sys.Uid))
+    if err != nil {
+        fmt.Println(err)
+    }
+    
+    // TODO: Device, Gid
     fmt.Printf("  File: '%s'\n", fi.Name())
-    fmt.Printf("  Size: %-12d Blocks: %-8d IO Block: %d %s\n", fi.Size(),8,4096,ftype)
-    fmt.Printf("Device: %-12s Inode : %-8d Links: %d\n", "800h/1200d",1,1)
-    fmt.Printf("Access: (%s) Uid: %s Gid: %s\n", fi.Mode(), "(1000/acisola)", "(1000/acisola)")
-    fmt.Printf("Access: %s\n", fi.ModTime())
-    fmt.Printf("Modify: %s\n", fi.ModTime())
-    fmt.Printf("Change: %s\n", fi.ModTime())
+    fmt.Printf("  Size: %-12d Blocks: %-8d IO Block: %d %s\n", fi.Size(), sys.Blocks, sys.Blksize, ftype)
     
+    // device, inode, links, permissions, uid, gid
+    fmt.Printf("Device: %-12d Inode : %-8d Links: %d\n", sys.Dev, sys.Ino, sys.Nlink)
+    fmt.Printf("Access: (%s) Uid: %s Gid: %d\n", fi.Mode(), fmt.Sprintf("( %d/ %s)", sys.Uid, usr.Username), sys.Gid)
+    
+    // print out times
+    fmt.Printf("Access: %s\n", timespecToTime(sys.Atim))
+    fmt.Printf("Modify: %s\n", timespecToTime(sys.Mtim))
+    fmt.Printf("Change: %s\n", timespecToTime(sys.Ctim))
 }
