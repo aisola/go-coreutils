@@ -32,13 +32,13 @@ const (
 )
 
 func main() {
-    create := flag.Bool("c", false, "do not create if file does not exist")
-    // newTime := flag.Int("t", 0, "set to time provided")
+	create := flag.Bool("c", false, "do not create if file does not exist")
+	// newTime := flag.Int("t", 0, "set to time provided")
 	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()
-    
-    if *help {
+
+	if *help {
 		fmt.Println(help_text)
 		os.Exit(0)
 	}
@@ -49,12 +49,12 @@ func main() {
 	}
 
 	files := flag.Args()
-    
-	for i:=0;i<len(files);i++ {
-        now := time.Now()
-        
-        err := os.Chtimes(files[i], now, now)
-        if err != nil && *create {
+
+	for i := 0; i < len(files); i++ {
+		now := time.Now()
+
+		err := os.Chtimes(files[i], now, now)
+		if err != nil && *create {
 			fmt.Printf("touch: cannot touch '%s'\n", files[i])
 			os.Exit(1)
 		}
