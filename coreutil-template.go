@@ -37,7 +37,7 @@ func main() {
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
-    
-    // other code
-    
+
+	// other code
+
 }
