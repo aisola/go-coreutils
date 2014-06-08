@@ -12,6 +12,7 @@ via git...
 
     $ git clone https://github.com/aisola/go-coreutils.git
     $ cd go-coreutils
+    $ go build ./...
 
 ### Legal
 go-coreutils 0.1 is licensed under the GNU General Public License v3.
