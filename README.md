@@ -2,15 +2,11 @@ GO-Coreutils
 ------------
 This is a Go1 implimentation of the GNU Coreutils.
 
-I guess the ironic thing is that they have been greatly developed using my Windows7 laptop. However, 
-they have been tested in Linux Mint 15. So, we know they work.
-
 ### Installation
 
-via goget...
+via go get...
 
-    $ go get github.com/aisola/go-coreutils
-    $ cd $GOPATH/src/github.com/aisola/go-coreutils
+    $ go get github.com/aisola/go-coreutils/...
     
 via git...
 
