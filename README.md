@@ -2,6 +2,8 @@ GO-Coreutils
 ------------
 This is a Go1 implimentation of the GNU Coreutils.
 
+All files are maintained by: Abram C. Isola
+
 ### Installation
 
 via go get...
@@ -18,7 +20,7 @@ via git...
 go-coreutils 0.1 is licensed under the GNU General Public License v3.
     
     go-coreutils v0.1
-    Copyright (C) 2014, Abram C. Isola
+    Copyright (C) 2014, The GO-Coreutils Developers.
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
