@@ -23,7 +23,7 @@ mktemp
 rmdir
 shred
 sync
-touch
+*touch
 truncate
 vdir
 base64
@@ -60,7 +60,7 @@ unexpand
 uniq
 wc
 arch
-basename
+*basename
 chroot
 date
 dirname
