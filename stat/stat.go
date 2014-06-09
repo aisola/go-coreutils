@@ -15,14 +15,15 @@ import "time"
 
 const (
 	help_text string = `
-    Usage: stat [OPTION]...
+    Usage: stat [FILE]...
+       or: stat [OPTION]
     
     display file or file system status
     
     THIS IS PROGRAM IS IN PROGRESS
 
-          --help     display this help and exit
-          --version  output version information and exit
+        --help     display this help and exit
+        --version  output version information and exit
     `
 	version_text = `
     stat (go-coreutils) 0.1

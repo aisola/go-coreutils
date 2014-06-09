@@ -14,13 +14,12 @@ import "flag"
 
 const (
 	help_text string = `
-    Usage: whoami [OPTION]...
+    Usage: whoami [OPTION]
     
     Print the user name associated with the current effective user ID.
-    Same as id -un.
 
-          --help     display this help and exit
-          --version  output version information and exit
+        --help     display this help and exit
+        --version  output version information and exit
     `
 	version_text = `
     whoami (go-coreutils) 0.1

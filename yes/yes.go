@@ -19,8 +19,8 @@ const (
     
     output a string repeatedly until killed
 
-          --help        display this help and exit
-          --version     output version information and exit
+        --help        display this help and exit
+        --version     output version information and exit
     `
 	version_text = `
     yes (go-coreutils) 0.1

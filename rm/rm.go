@@ -16,11 +16,11 @@ const (
     
     Remove files (delete/unlink)
 
-          --help     display this help and exit
-          --version  output version information and exit
-          -f         ignore if files do not exist, never prompt
-          -r, -R, --recursive
-              remove directories and their contents recursively
+        --help     display this help and exit
+        --version  output version information and exit
+        -f         ignore if files do not exist, never prompt
+        -r, -R, --recursive
+            remove directories and their contents recursively
     `
 	version_text = `
     rm (go-coreutils) 0.1

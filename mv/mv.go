@@ -14,16 +14,17 @@ import "path/filepath"
 
 const (
 	help_text string = `
-    Usage: mv [OPTION]...
+    Usage: mv [OPTION]... [PATH]... [PATH]
+       or: mv [PATH] [PATH]
+       or: mv [OPTION]
     
     move or rename files or directories
+        
+        --help        display this help and exit
+        --version     output version information and exit
 
-          --help        display this help and exit
-          --version     output version information and exit
-          
-          -f, --force   remove existing destination files and never prompt the user
-          -v, --verbose print the name of each file before moving it
-    `
+        -f, --force   remove existing destination files and never prompt the user
+    ` // -v, --verbose print the name of each file before moving it
 	version_text = `
     mv (go-coreutils) 0.1
 

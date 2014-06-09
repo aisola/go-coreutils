@@ -19,8 +19,8 @@ const (
     
     concatenate and print the content of files
 
-          --help        display this help and exit
-          --version     output version information and exit
+        --help        display this help and exit
+        --version     output version information and exit
     `
     version_text = `
     cat (go-coreutils) 0.1

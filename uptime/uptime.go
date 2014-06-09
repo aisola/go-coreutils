@@ -17,7 +17,16 @@ import "strings"
 import "syscall"
 import "time"
 
-const version_text = `
+const (
+	help_text string = `
+    Usage: uptime
+    
+    tell how long the system has been running
+
+        --help        display this help and exit
+        --version     output version information and exit
+    `
+	version_text = `
     uptime (go-coreutils) 0.1
 
     Copyright (C) 2014, The GO-Coreutils Developers.
@@ -25,6 +34,7 @@ const version_text = `
     LICENSE. This is free software, and you are welcome to redistribute 
     it under certain conditions in LICENSE.
 `
+)
 
 type Load struct {
 	L1, L5, L15 float64

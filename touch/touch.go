@@ -17,11 +17,11 @@ const (
     
     set/modify file timestamps
 
-          --help      display this help and exit
-          --version   output version information and exit
-          
-          -c          do not create if file does not exist
-          -t=time     set time to time
+        --help      display this help and exit
+        --version   output version information and exit
+
+        -c          do not create if file does not exist
+        -t=time     set time to time
     `
 	version_text = `
     touch (go-coreutils) 0.1

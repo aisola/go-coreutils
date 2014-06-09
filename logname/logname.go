@@ -12,7 +12,14 @@ import "os"
 import "os/user"
 
 const (
-	help_text    = "Usage: logname \nPrint the name of the current user"
+	help_text    = `
+    Usage: logname
+    
+    print the name of the current user
+
+        --help        display this help and exit
+        --version     output version information and exit
+    `
 	version_text = `
     logname (go-coreutils) 0.1
 

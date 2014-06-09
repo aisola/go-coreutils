@@ -12,13 +12,13 @@ import "os"
 
 const (
 	help_text = `
-	Usage: false [ignored command line arguments]
-  	or:  false OPTION
+	Usage: false
+  	   or: false OPTION
     
 	Exit with a status code indicating failure.
 
-      --help     display this help and exit
-      --version  output version information and exit
+        --help     display this help and exit
+        --version  output version information and exit
     `
 	version_text = `
     false (go-coreutils) 0.1

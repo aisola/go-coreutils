@@ -18,8 +18,8 @@ const (
     
     A dummy template for the source of go-coreutils.
 
-          --help     display this help and exit
-          --version  output version information and exit
+        --help     display this help and exit
+        --version  output version information and exit
     `
 	version_text = `
     basename (go-coreutils) 0.1
