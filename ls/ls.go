@@ -1,10 +1,8 @@
 //
 // ls.go (go-coreutils) 0.1
-// Copyright (C) 2014, Abram C. Isola.
+// Copyright (C) 2014, The GO-Coreutils Developers.
 //
-// MUCH OF THIS CODE WAS PROVIDED BY:
-//     Michael Murphy (mmstickman@gmail.com)
-//         https://gist.github.com/mmstick/2046b2a8ec2c5c381ad9
+// Written By: Michael Murphy, Abram C. Isola
 //
 package main
 

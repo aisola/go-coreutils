@@ -1,6 +1,8 @@
 //
 // basename.go (go-coreutils) 0.1
-// Copyright (C) 2014, Abram C. Isola.
+// Copyright (C) 2014, The GO-Coreutils Developers.
+// 
+// Written By: Abram C. Isola
 //
 package main
 
@@ -22,7 +24,7 @@ const (
 	version_text = `
     basename (go-coreutils) 0.1
 
-    Copyright (C) 2014 Abram C. Isola.
+    Copyright (C) 2014, The GO-Coreutils Developers.
     This program comes with ABSOLUTELY NO WARRANTY; for details see
     LICENSE. This is free software, and you are welcome to redistribute 
     it under certain conditions in LICENSE.

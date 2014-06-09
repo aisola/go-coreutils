@@ -1,6 +1,6 @@
 //
 // yes.go (go-coreutils) 0.1
-// Copyright (C) 2014, The GO-Coreutils Developers
+// Copyright (C) 2014, The GO-Coreutils Developers.
 //
 // Written By: Trey Tacon, Abram C. Isola
 //
