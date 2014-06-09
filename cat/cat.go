@@ -13,7 +13,16 @@ import "io"
 import "net"
 import "os"
 
-const version_text = `
+const (
+	help_text string = `
+    Usage: cat [OPTIONS] [FILE]...
+    
+    concatenate and print the content of files
+
+          --help        display this help and exit
+          --version     output version information and exit
+    `
+    version_text = `
     cat (go-coreutils) 0.1
 
     Copyright (C) 2014, The GO-Coreutils Developers.
@@ -21,6 +30,7 @@ const version_text = `
     LICENSE. This is free software, and you are welcome to redistribute 
     it under certain conditions in LICENSE.
 `
+)
 
 var (
 	countNonBlank     = flag.Bool("b", false, "Number the non-blank output lines, starting at 1.")
@@ -65,8 +75,14 @@ func dumpLines(w io.Writer, r io.Reader) (n int64, err error) {
 }
 
 func main() {
+	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()
+
+	if *help {
+		fmt.Println(help_text)
+		os.Exit(0)
+	}
 
 	if *version {
 		fmt.Println(version_text)
