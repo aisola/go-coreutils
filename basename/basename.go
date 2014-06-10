@@ -16,7 +16,7 @@ const (
     Usage: basename FILENAME
        or: basename OPTION
     
-    A dummy template for the source of go-coreutils.
+    strip directory and suffix from filenames
 
         --help     display this help and exit
         --version  output version information and exit
