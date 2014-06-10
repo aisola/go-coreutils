@@ -2,7 +2,7 @@
 // dirname.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
 //
-// Written By: Trey Tacon
+// Written By: Trey Tacon, Abram C. Isola
 //
 package main
 
@@ -13,16 +13,17 @@ import (
 )
 
 const (
-	usage = `
-    usage: dirname path
+	help_text = `
+    usage: dirname PATH
+       or: dirname OPTION
     
-    A dummy template for the source of go-coreutils.
+    convert a full pathname to just a path
 
         --help     display this help and exit
         --version  output version information and exit
     `
 	version_text = `
-    basename (go-coreutils) 0.1
+    dirname (go-coreutils) 0.1
 
     Copyright (C) 2014, The GO-Coreutils Developers.
     This program comes with ABSOLUTELY NO WARRANTY; for details see
@@ -32,7 +33,7 @@ const (
 )
 
 var (
-	help    = flag.Bool("help", false, usage)
+	help    = flag.Bool("help", false, help_text)
 	version = flag.Bool("version", false, version_text)
 )
 
@@ -40,7 +41,7 @@ func main() {
 	flag.Parse()
 
 	if *help {
-		fmt.Println(usage)
+		fmt.Println(help_text)
 		return
 	}
 
