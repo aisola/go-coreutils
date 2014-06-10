@@ -100,4 +100,4 @@ vdir
 wc
 who
 *whoami
-yes
+*yes
