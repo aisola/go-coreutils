@@ -2,7 +2,7 @@ This is a list of the original GNU Coreutils.
 
 (* indiates its current implimentation in go-coreutils.)
 
-arch
+*arch
 base64
 *basename
 *cat
