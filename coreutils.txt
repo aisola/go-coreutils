@@ -87,7 +87,7 @@ test
 timeout
 truncate
 tr
-true
+*true
 tty
 tsort
 unexpand
