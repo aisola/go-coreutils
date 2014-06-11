@@ -60,6 +60,7 @@ func main() {
 		// while '$ dirname /Users/ttacon/' == /Users
 		fmt.Println(filepath.Dir(filepath.Clean(flag.Arg(0))))
 	} else {
-		fmt.Println(usage)
+		fmt.Println(help_text)
+		return
 	}
 }
