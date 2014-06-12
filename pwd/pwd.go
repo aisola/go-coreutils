@@ -1,7 +1,7 @@
 //
 // pwd.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
-// 
+//
 // Written By: Abram C. Isola
 //
 package main
@@ -31,11 +31,11 @@ const (
 )
 
 func main() {
-    help    := flag.Bool("help", false, help_text)
+	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()
-	
-    if *help {
+
+	if *help {
 		fmt.Println(help_text)
 		os.Exit(0)
 	}

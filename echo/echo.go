@@ -2,7 +2,7 @@
 // echo.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
 //
-// Written By: Abram C. Isola 
+// Written By: Abram C. Isola
 //
 package main
 
@@ -25,7 +25,7 @@ const (
         --help        display this help and exit
         --version     output version information and exit
     `
-    version_text = `
+	version_text = `
     echo (go-coreutils) 0.1
 
     Copyright (C) 2014, The GO-Coreutils Developers.
@@ -36,11 +36,11 @@ const (
 )
 
 func main() {
-	enableEscapeChars  := flag.Bool("e", false, "enable interpretation of backslash escapes")
-	omitNewline        := flag.Bool("n", false, "do not output the trailing newline")
+	enableEscapeChars := flag.Bool("e", false, "enable interpretation of backslash escapes")
+	omitNewline := flag.Bool("n", false, "do not output the trailing newline")
 	disableEscapeChars := flag.Bool("E", true, "disable interpretation of backslash escapes (default)")
-	help               := flag.Bool("help", false, help_text)
-	version            := flag.Bool("version", false, version_text)
+	help := flag.Bool("help", false, help_text)
+	version := flag.Bool("version", false, version_text)
 	flag.Parse()
 
 	if *help {

@@ -1,7 +1,7 @@
 //
 // basename.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
-// 
+//
 // Written By: Abram C. Isola
 //
 package main
@@ -45,11 +45,11 @@ func main() {
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
-    
-    if flag.NArg() >= 1 {
-        fmt.Println( filepath.Base(flag.Arg(0)) )
-    } else {
-        fmt.Println("basename: fatal: missing operand")
-    }
+
+	if flag.NArg() >= 1 {
+		fmt.Println(filepath.Base(flag.Arg(0)))
+	} else {
+		fmt.Println("basename: fatal: missing operand")
+	}
 
 }

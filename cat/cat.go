@@ -22,7 +22,7 @@ const (
         --help        display this help and exit
         --version     output version information and exit
     `
-    version_text = `
+	version_text = `
     cat (go-coreutils) 0.1
 
     Copyright (C) 2014, The GO-Coreutils Developers.

@@ -1,7 +1,7 @@
 //
 // logname.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
-// 
+//
 // Written By: Abram C. Isola
 //
 package main
@@ -12,7 +12,7 @@ import "os"
 import "os/user"
 
 const (
-	help_text    = `
+	help_text = `
     Usage: logname
     
     print the name of the current user
