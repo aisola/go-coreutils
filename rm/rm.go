@@ -8,13 +8,15 @@ package main
 
 import "flag"
 import "fmt"
+import "io"
 import "os"
+import "syscall"
 
 const (
 	help_text string = `
     Usage: rm [OPTION]...
     
-    Remove files (delete/unlink)
+    remove files (delete/unlink)
 
         --help     display this help and exit
         --version  output version information and exit
@@ -32,15 +34,161 @@ const (
 `
 )
 
+var (
+	force        = flag.Bool("f", false, "ignore if files do not exist, never prompt")
+	recursiveR   = flag.Bool("R", false, "remove directories and their contents recursively")
+	recursiver   = flag.Bool("r", false, "remove directories and their contents recursively")
+	recursive    = flag.Bool("recursive", false, "remove directories and their contents recursively")
+	interactivei = flag.Bool("i", false, "prompt before each removal")
+	// interactiveI = flag.Bool("I", false, "")
+)
+
+// MODIFIED FROM THE os.RemoveAll() implimentation
+// RemoveAll removes all files/directories below
+// and prompts if the option is set.
+func RemoveAll(path string) error {
+	var answer string
+	var err error
+
+	// Is this a directory we need to recurse into?
+	dir, serr := os.Lstat(path)
+	if serr != nil {
+		if serr, ok := serr.(*os.PathError); ok && (os.IsNotExist(serr.Err) || serr.Err == syscall.ENOTDIR) {
+			return nil
+		}
+		return serr
+	}
+
+	if !dir.IsDir() {
+		// Not a directory;
+		if *interactivei {
+			fmt.Printf("rm: do you want to remove '%s'? (y/N) ", path)
+			_, err = fmt.Scanln(&answer)
+			if err != nil {
+				return err
+			}
+
+			if answer == "y" || answer == "yes" {
+				os.Remove(path)
+			}
+		} else {
+			os.Remove(path)
+		}
+
+		return nil
+	}
+
+	// Turns out, it's a directory...
+	if !*recursiveR && !*recursiver && !*recursive {
+		fmt.Printf("rm: '%s' is a directory\n", path)
+		return nil
+	}
+
+	if *interactivei {
+		fmt.Printf("rm: descend into directory '%s'? (y/N) ", path)
+		_, err = fmt.Scanln(&answer)
+		if err != nil {
+			return err
+		}
+
+		if answer == "y" || answer == "yes" {
+
+			fd, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+
+			// Remove contents & return first error.
+			err = nil
+			for {
+				names, err1 := fd.Readdirnames(100)
+				for _, name := range names {
+					err1 := RemoveAll(path + string(os.PathSeparator) + name)
+					if err == nil {
+						err = err1
+					}
+				}
+				if err1 == io.EOF {
+					break
+				}
+				// If Readdirnames returned an error, use it.
+				if err == nil {
+					err = err1
+				}
+				if len(names) == 0 {
+					break
+				}
+			}
+
+			// Close directory, because windows won't remove opened directory.
+			fd.Close()
+
+		} else {
+			return nil
+		}
+
+	} else {
+		fd, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+
+		// Remove contents & return first error.
+		err = nil
+		for {
+			names, err1 := fd.Readdirnames(100)
+			for _, name := range names {
+				err1 := RemoveAll(path + string(os.PathSeparator) + name)
+				if err == nil {
+					err = err1
+				}
+			}
+			if err1 == io.EOF {
+				break
+			}
+			// If Readdirnames returned an error, use it.
+			if err == nil {
+				err = err1
+			}
+			if len(names) == 0 {
+				break
+			}
+		}
+
+		// Close directory, because windows won't remove opened directory.
+		fd.Close()
+	}
+
+	if *interactivei {
+
+		fmt.Printf("rm: remove '%s'? (y/N) ", path)
+		_, err := fmt.Scanln(&answer)
+		if err != nil {
+			return err
+		}
+
+		if answer == "y" || answer == "yes" {
+			// Remove directory.
+			err1 := os.Remove(path)
+			if err == nil {
+				err = err1
+			}
+		}
+
+	} else {
+		// Remove directory.
+		err1 := os.Remove(path)
+		if err == nil {
+			err = err1
+		}
+	}
+
+	return err
+}
+
 func main() {
 	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
-	force := flag.Bool("f", false, "Ignore if files do not exist. Never prompt.")
-	r1 := flag.Bool("R", false, "Remove directories and their contents recursively.")
-	r2 := flag.Bool("r", false, "Remove directories and their contents recursively.")
-	r3 := flag.Bool("recursive", false, "Remove directories and their contents recursively.")
-	// i1 := flag.Bool("I", false, "Remove directories and their contents recursively.")
-	// i2 := flag.Bool("i", false, "Remove directories and their contents recursively.")
 	flag.Parse()
 
 	if *help {
@@ -55,39 +203,6 @@ func main() {
 
 	files := flag.Args()
 	for i := 0; i < len(files); i++ {
-
-		// file exists?
-		if fp, err := os.Stat(files[i]); err == nil {
-
-			if fp.IsDir() {
-
-				if *r1 || *r2 || *r3 {
-
-					err = os.RemoveAll(files[i])
-					if err != nil {
-						fmt.Printf("rm: Cannot remove '%s': %s\n", files[i], err)
-					}
-
-				} else {
-
-					fmt.Printf("rm: '%s'is a directory\n", files[i])
-
-				}
-
-			} else {
-
-				os.Remove(files[i])
-
-			}
-
-		} else {
-
-			if !*force && os.IsNotExist(err) {
-				fmt.Printf("rm: Cannot remove '%s': No such file or directory\n", files[i])
-			} else if !*force && !os.IsNotExist(err) {
-				fmt.Printf("rm: Cannot remove '%s': %s\n", files[i], err)
-			}
-
-		}
+		RemoveAll(files[i])
 	}
 }
