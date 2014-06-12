@@ -16,6 +16,14 @@ via git...
     $ cd go-coreutils
     $ go build ./...
 
+### Known Issues
+
++ Incomplete flags : Not all commands have the flags you may expect.
++ Large Binary Size: This is a Go issue... The binary sizes have been 
+going up. Even Rob Pike has said that this has got to be fixed by the 
+Go team.
+
+
 ### Legal
 go-coreutils 0.1 is licensed under the GNU General Public License v3.
     
