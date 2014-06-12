@@ -21,6 +21,7 @@ const (
         --help     display this help and exit
         --version  output version information and exit
         -f         ignore if files do not exist, never prompt
+        -i         prompt before each removal
         -r, -R, --recursive
             remove directories and their contents recursively
     `
