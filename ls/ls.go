@@ -14,35 +14,46 @@ import "flag"
 import "unsafe"
 import "syscall"
 
-const (
-	TERMINAL_INFO    = 0x5413 //
+const ( // Constant variables used throughout the program.
+	TERMINAL_INFO    = 0x5413 // Used in the getTerminalWidth function
 	EXECUTABLE       = 0111   // File executable bit
 	CYAN_SYMLINK     = "\x1b[36;1m"
 	BLUE_DIR         = "\x1b[34;1m"
 	GREEN_EXECUTABLE = "\x1b[32;1m"
-	RESET            = "\x1b[0m"
-	SPACING          = 1
+	RESET            = "\x1b[0m" // Reset Color
+	SPACING          = 1 // Spacing between columns
 
-	help_text string = `
-    Usage: ls [OPTION]
+	help_text string = `Usage: ls [OPTION]
     
-    list files and directories in working directory
+list files and directories in working directory
 
-        --help        display this help and exit
-        --version     output version information and exit
+  --help        display this help and exit
+  --version     output version information and exit
         
-        -a  include hidden files and directories
-        -1  list in a single column
-    `
-	version_text = `
-    ls (go-coreutils) 0.1
+  -a  include hidden files and directories
+  -1  list in a single column`
+	version_text = `ls (go-coreutils) 0.1
 
-    Copyright (C) 2014, The GO-Coreutils Developers.
-    This program comes with ABSOLUTELY NO WARRANTY; for details see
-    LICENSE. This is free software, and you are welcome to redistribute 
-    it under certain conditions in LICENSE.
-`
+Copyright (C) 2014, The GO-Coreutils Developers.
+This program comes with ABSOLUTELY NO WARRANTY; for details see
+LICENSE. This is free software, and you are welcome to redistribute 
+it under certain conditions in LICENSE.`
 )
+
+var ( // Default flags and variables.
+	showHidden      = flag.Bool("a", false, "list hidden files and directories")
+	oneColumn       = flag.Bool("1", false, "list files by one column")
+	help            = flag.Bool("help", false, "display this help and exit")
+	version         = flag.Bool("version", false, "output version information and exit")
+	isHidden        = false
+	printOneLine    = true
+	terminalWidth   = int(getTerminalWidth())
+	maxCharLength   = 0
+	totalCharLength = 0
+)
+
+/* The following are used to get the width of the terminal for use in determining
+ * how many columns to print. */
 
 type winsize struct {
 	Row, Col, Xpixel, Ypixel uint16
@@ -61,30 +72,28 @@ func getTerminalWidth() uint {
 }
 
 func main() {
+
+	// A list of variables used in this function
+	
 	var colorized string
-	var isHidden, printOneLine bool = false, true
-	var totalCharLength, maxCharLength int
 	fileNameList := make([]string, 0)
 	fileLengthList := make([]int, 0)
-	terminalWidth := int(getTerminalWidth())
+	flag.Parse() // Parse flags
 
-	showHidden := flag.Bool("a", false, "include hidden files and directories")
-	oneColumn := flag.Bool("1", false, "list in a single column")
-	help := flag.Bool("help", false, "display this help and exit")
-	version := flag.Bool("version", false, "output version information and exit")
-	flag.Parse()
-
-	if *help {
+	if *help { // Display help information
 		fmt.Println(help_text)
 		os.Exit(0)
 	}
 
-	if *version {
+	if *version { // Display version information
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
 
-	var path string
+	// If there is no argument, set the directory path to "./"
+	
+	var path, fileName string
+	var fileLength int
 	args := flag.Args()
 	if len(args) < 1 {
 		path = "./"
@@ -106,37 +115,36 @@ func main() {
 	 * display the file. */
 
 	for _, file := range directory {
-		filterHidden(file.Name(), showHidden, &isHidden)
+		filterHidden(file.Name())
 		if isHidden == false {
+			/* If it should be displayed, it will call the colorizer function to
+	 		* determine what kind of file the file is (Directory, Symlink, Executable,
+	 		* or File) and colorize the file based on that. */
 
-			/* If it should be displayed, it will call the setModeType function to
-			 * determine what kind of file the file is (Directory, Symlink, Executable,
-			 * or File).
-			 *
-			 * After determining the modeType, we send the modeType and name of the file
-			 * to the colorizer function to colorize the name based on the modeType. */
-
-			colorized = colorizer(file.Name(), setModeType(file.IsDir(),
+			fileName = file.Name()
+			fileLength = len(fileName)
+			
+			colorized = colorizer(fileName, file.IsDir(),
 				file.Mode()&os.ModeSymlink == os.ModeSymlink,
-				file.Mode()&EXECUTABLE == EXECUTABLE))
+				file.Mode()&EXECUTABLE == EXECUTABLE)
 
 			/* Rather than print directly to the terminal, we store name and length of
 			 * the name in slices for later use. */
 
 			fileNameList = append(fileNameList, colorized)
-			fileLengthList = append(fileLengthList, len(file.Name()))
+			fileLengthList = append(fileLengthList, fileLength)
 
 			/* Finally, this is a good spot for getting some statistics on the totalCharLength
 			 * and maxCharLength of the files. */
 
 			if totalCharLength <= terminalWidth {
-				totalCharLength += len(file.Name()) + SPACING
+				totalCharLength += fileLength + SPACING
 			} else {
 				printOneLine = false
 			}
 
 			if len(file.Name()) > maxCharLength {
-				maxCharLength = len(file.Name())
+				maxCharLength = fileLength
 			}
 		}
 	}
@@ -158,9 +166,9 @@ func main() {
 	default: // Properly spaces our files and then prints from top to bottom.
 		spaced := make([]string, 0)
 		for index, file := range fileNameList {
-			spaced = append(spaced, spacer(&file, &fileLengthList[index], &maxCharLength))
+			spaced = append(spaced, spacer(&file, fileLengthList[index]))
 		}
-		printTopToBottom(spaced, &maxCharLength, &terminalWidth) // Let's get printing!
+		printTopToBottom(spaced) // Let's get printing!
 		fmt.Println(RESET)                                       // Once again.
 	}
 }
@@ -169,43 +177,27 @@ func main() {
  * the file is a hidden file or not. If the flag is not set and the file is a hidden
  * file (starts with a period), then it will not be printed. */
 
-func filterHidden(file string, showHidden, isHidden *bool) {
+func filterHidden(file string) {
 	switch {
 	case *showHidden:
-		*isHidden = false
+		isHidden = false
 	case strings.HasPrefix(file, "."):
-		*isHidden = true
+		isHidden = true
 	default:
-		*isHidden = false
+		isHidden = false
 	}
-}
-
-/* The setModeType function will determine whether the file is a directory, symlink,
- * executable, or file and then set the modeType accordingly. */
-
-func setModeType(isDir, isSymlink, isExecutable bool) string {
-	var modeType string
-	switch {
-	case isSymlink:
-		modeType = "Symlink"
-	case isDir:
-		modeType = "Dir"
-	case isExecutable:
-		modeType = "Exe"
-	}
-	return modeType
 }
 
 /* If the file is a symbolic link, print it in cyan; a directory, blue; an executable file,
  * green; else print the file in white. */
 
-func colorizer(file, modeType string) string {
-	switch modeType {
-	case "Symlink":
+func colorizer(file string, isDir, isSymlink, isExecutable bool) string {
+	switch {
+	case isSymlink:
 		return CYAN_SYMLINK + file
-	case "Dir":
+	case isDir:
 		return BLUE_DIR + file
-	case "Exe":
+	case isExecutable:
 		return GREEN_EXECUTABLE + file
 	default:
 		return RESET + file
@@ -216,8 +208,8 @@ func colorizer(file, modeType string) string {
 /* The spacer function will add spaces to the end of each file name so that they line up
  * correctly when printing. */
 
-func spacer(name *string, charLength, maxCharLength *int) string {
-	return string(*name + strings.Repeat(" ", *maxCharLength-*charLength+SPACING))
+func spacer(name *string, charLength int) string {
+	return string(*name + strings.Repeat(" ", maxCharLength - charLength + SPACING))
 }
 
 /* The countRows function counts the number of rows that will be printed. The number is
@@ -235,52 +227,52 @@ func countRows(lastRowCount, maxColumns, numOfFiles *int) int {
 /* Finally, the printTopToBottom function will take the spaced slice and print all the
  * files from top to bottom. */
 
-func printTopToBottom(spaced []string, maxCharLength, terminalWidth *int) {
-
+func printTopToBottom(spaced []string) {
+  
 	/* The first thing that we need to know is how many columns we will be printing, how
-	 * many files are left over to be printed on the last row, and the number of rows that
-	 * we will be printing. */
-
+ 	* many files are left over to be printed on the last row, and the number of rows that
+ 	* we will be printing. */
+  
 	numOfFiles := len(spaced)
-	maxColumns := *terminalWidth / (*maxCharLength + SPACING)
+	maxColumns := terminalWidth / (maxCharLength + SPACING)
 	lastRowCount := numOfFiles % maxColumns
 	numOfRows := countRows(&lastRowCount, &maxColumns, &numOfFiles)
 	var currentRow, currentIndex int = 1, 0
-	printing := true // Set the initial value
-
-	/* This our magnificent printing press. It will first start on the default case, which
-	 * will print the majority of the files from the first row all the way to the next to
-	 * last row. The tricky party is trying to figure out an algorithm that allows us to
-	 * print from top to bottom. To do this, we need to know how many files are left over
-	 * on the last row.
-	 *
-	 * For example, say you have three rows, eight columns, and the last row has four files.
-	 * To get everything to play nicely together, we start by looping through the file list
-	 * in intervals based on the number of rows (three in our example). However, at some point,
-	 * the last row is going to kill our algorithm. To counter-act that, we need to switch it
-	 * to counting in intervals of two after the fifth file has been printed on each row.
-	 *
-	 * Once we get to the last row, we can simply print everyting in an interval based on the
-	 * number of rows until we have printed the last file. */
-
+	printing := true // Set the initial value 
+  
+  /* This our magnificent printing press. It will first start on the default case, which
+   * will print the majority of the files from the first row all the way to the next to
+   * last row. The tricky party is trying to figure out an algorithm that allows us to
+   * print from top to bottom. To do this, we need to know how many files are left over
+   * on the last row.
+   * 
+   * For example, say you have three rows, eight columns, and the last row has four files.
+   * To get everything to play nicely together, we start by looping through the file list
+   * in intervals based on the number of rows (three in our example). However, at some point,
+   * the last row is going to kill our algorithm. To counter-act that, we need to switch it
+   * to counting in intervals of two after the fifth file has been printed on each row.
+   *
+   * Once we get to the last row, we can simply print everyting in an interval based on the
+   * number of rows until we have printed the last file. */
+  
 	for printing {
 		switch {
 		case currentRow < numOfRows: // Prints all rows except the last row.
 			for column := 1; column < maxColumns; column++ { // Prints all but the last column.
-				fmt.Print(spaced[currentIndex])
-				if column >= lastRowCount+1 { // This is where we see if it's time to switch our
-					currentIndex += numOfRows - 1 // interval to the number of rows minus one.
-				} else {
-					currentIndex += numOfRows
-				}
+	  			fmt.Print(spaced[currentIndex])
+	  			if column >= lastRowCount + 1 { // This is where we see if it's time to switch our
+	    			currentIndex += numOfRows - 1 // interval to the number of rows minus one.
+	  			} else {
+	  				currentIndex += numOfRows
+	  			}
 			}
 			fmt.Println(spaced[currentIndex]) // Prints the final column in a row.
-			currentRow++                      // It's time to start printing the next row.
-			currentIndex = currentRow - 1     // We need to reset this for the next row.
+			currentRow++ // It's time to start printing the next row.
+			currentIndex = currentRow - 1 // We need to reset this for the next row.
 		default: // Prints the final row.
 			for index := 1; index <= lastRowCount; index++ {
-				fmt.Print(spaced[currentIndex])
-				currentIndex += numOfRows
+	  			fmt.Print(spaced[currentIndex])
+	  			currentIndex += numOfRows
 			}
 			printing = false // We are finished printing.
 		}
