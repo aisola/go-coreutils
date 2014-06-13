@@ -23,21 +23,24 @@ const ( // Constant variables used throughout the program.
 	RESET            = "\x1b[0m" // Reset Color
 	SPACING          = 1 // Spacing between columns
 
-	help_text string = `Usage: ls [OPTION]
+	help_text string = `
+    Usage: pwd
     
-list files and directories in working directory
+    list files and directories in working directory
 
-  --help        display this help and exit
-  --version     output version information and exit
+        --help        display this help and exit
+        --version     output version information and exit
         
-  -a  include hidden files and directories
-  -1  list in a single column`
-	version_text = `ls (go-coreutils) 0.1
+        -a  include hidden files and directories
+        -1  list in a single column`
+    version_text = `
+    ls (go-coreutils) 0.1
 
-Copyright (C) 2014, The GO-Coreutils Developers.
-This program comes with ABSOLUTELY NO WARRANTY; for details see
-LICENSE. This is free software, and you are welcome to redistribute 
-it under certain conditions in LICENSE.`
+    Copyright (C) 2014, The GO-Coreutils Developers.
+    This program comes with ABSOLUTELY NO WARRANTY; for details see
+    LICENSE. This is free software, and you are welcome to redistribute 
+    it under certain conditions in LICENSE.
+`
 )
 
 var ( // Default flags and variables.
