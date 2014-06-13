@@ -97,7 +97,7 @@ func main() {
 
 	directory, err := ioutil.ReadDir(path)
 	if err != nil {
-		fmt.Print("gols: ", path, " - No such file or directory\n")
+		fmt.Print("ls: ", path, " - No such file or directory\n")
 		return
 	}
 
