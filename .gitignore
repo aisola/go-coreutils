@@ -1,4 +1,4 @@
 *.exe
 *.py
-.deps
+.idea/
 make
