@@ -169,7 +169,7 @@ func main() {
 			spaced = append(spaced, spacer(&file, fileLengthList[index]))
 		}
 		printTopToBottom(spaced) // Let's get printing!
-		fmt.Println(RESET)                                       // Once again.
+		fmt.Println(RESET) // Reset terminal at the end.
 	}
 }
 
@@ -261,7 +261,7 @@ func printTopToBottom(spaced []string) {
 			for column := 1; column < maxColumns; column++ { // Prints all but the last column.
 	  			fmt.Print(spaced[currentIndex])
 	  			if column >= lastRowCount + 1 { // This is where we see if it's time to switch our
-	    			currentIndex += numOfRows - 1 // interval to the number of rows minus one.
+	    				currentIndex += numOfRows - 1 // interval to the number of rows minus one.
 	  			} else {
 	  				currentIndex += numOfRows
 	  			}
