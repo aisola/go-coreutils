@@ -4,6 +4,7 @@
 //
 // Written By: Michael Murphy, Abram C. Isola
 //
+
 package main
 
 import "fmt"
@@ -15,14 +16,15 @@ import "unsafe"
 import "syscall"
 
 const ( // Constant variables used throughout the program.
-	TERMINAL_INFO    = 0x5413 // Used in the getTerminalWidth function
-	EXECUTABLE       = 0111   // File executable bit
-	CYAN_SYMLINK     = "\x1b[36;1m"
-	BLUE_DIR         = "\x1b[34;1m"
-	GREEN_EXECUTABLE = "\x1b[32;1m"
-	RESET            = "\x1b[0m" // Reset Color
-	SPACING          = 1 // Spacing between columns
-
+	TERMINAL_INFO    = 0x5413         // Used in the getTerminalWidth function
+	EXECUTABLE       = 0111           // File executable bit
+	SYMLINK          = os.ModeSymlink // Symlink bit
+	CYAN_SYMLINK     = "\x1b[36;1m"   // Cyan terminal color
+	BLUE_DIR         = "\x1b[34;1m"   // Blue terminal color
+	GREEN_EXECUTABLE = "\x1b[32;1m"   // Green terminal color
+	RESET            = "\x1b[0m"      // Reset terminal color
+	SPACING          = 1              // Spacing between columns
+	
 	help_text string = `
     Usage: pwd
     
@@ -48,22 +50,19 @@ var ( // Default flags and variables.
 	oneColumn       = flag.Bool("1", false, "list files by one column")
 	help            = flag.Bool("help", false, "display this help and exit")
 	version         = flag.Bool("version", false, "output version information and exit")
-	isHidden        = false
-	printOneLine    = true
-	terminalWidth   = int(getTerminalWidth())
-	maxCharLength   = 0
-	totalCharLength = 0
+	isHidden        = false                   // Sets whether or not a file should be hidden.
+	printOneLine    = true                    // Sets whether or not to print on one row.
+	terminalWidth   = int(getTerminalWidth()) // Grabs information on the current terminal width.
+	maxCharLength   = 0                       // Statistics for the largest file name length.
+	totalCharLength = 0                       // Statistics for the total number of characters.
 )
 
-/* The following are used to get the width of the terminal for use in determining
- * how many columns to print. */
-
-type winsize struct {
+type termsize struct { // Stores information regarding the terminal size.
 	Row, Col, Xpixel, Ypixel uint16
 }
 
-func getTerminalWidth() uint {
-	ws := &winsize{}
+func getTerminalWidth() uint { // Obtains the current width of the terminal.
+	ws := &termsize{}
 	retCode, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(syscall.Stdin),
 		uintptr(TERMINAL_INFO),
@@ -75,79 +74,76 @@ func getTerminalWidth() uint {
 }
 
 func main() {
-
-	// A list of variables used in this function
 	
-	var colorized string
-	fileNameList := make([]string, 0)
-	fileLengthList := make([]int, 0)
-	flag.Parse() // Parse flags
-
-	if *help { // Display help information
+	fileNameList := make([]string, 0) // Stores a list of files with their unaltered name.
+	fileLengthList := make([]int, 0)  // Stores a list of character lengths per file.
+	flag.Parse()                      // Parse flags
+	
+	if *help {                        // Display help information
 		fmt.Println(help_text)
 		os.Exit(0)
 	}
 
-	if *version { // Display version information
+	if *version {                     // Display version information
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
 
 	// If there is no argument, set the directory path to "./"
 	
-	var path, fileName string
-	var fileLength int
+	var path string
 	args := flag.Args()
 	if len(args) < 1 {
 		path = "./"
 	} else {
 		path = args[0]
 	}
-
+	
 	/* Scans the directory and returns a list of the contents. If the directory
 	 * does not exist, an error is printed and the program exits. */
-
+	
 	directory, err := ioutil.ReadDir(path)
 	if err != nil {
 		fmt.Print("ls: ", path, " - No such file or directory\n")
 		return
 	}
-
+	
 	/* This for loop will loop through each file in the directory in ascending order
 	 * and call the filterHidden function to determine whether or not it should
 	 * display the file. */
-
+	
+	var colorized string      // Stores the colorized name
+	var currentFileLength int // Stores the current file length
 	for _, file := range directory {
-		filterHidden(file.Name())
+		filterHidden(file.Name()) // Check to see if the file is to be hidden or not.
 		if isHidden == false {
 			/* If it should be displayed, it will call the colorizer function to
-	 		* determine what kind of file the file is (Directory, Symlink, Executable,
-	 		* or File) and colorize the file based on that. */
-
-			fileName = file.Name()
-			fileLength = len(fileName)
+			 * determine what kind of file the file is (Directory, Symlink, Executable,
+			 * or File) and colorize the file based on that. */
 			
-			colorized = colorizer(fileName, file.IsDir(),
-				file.Mode()&os.ModeSymlink == os.ModeSymlink,
-				file.Mode()&EXECUTABLE == EXECUTABLE)
+			colorized = colorizer(file.Name(),            // Send current file to the colorizer function
+				file.IsDir(),                         // Check if the file is a directory
+				file.Mode()&SYMLINK == SYMLINK,       // Check if it is a symbolic link
+				file.Mode()&EXECUTABLE == EXECUTABLE) // Check if it is an executable
 
 			/* Rather than print directly to the terminal, we store name and length of
 			 * the name in slices for later use. */
-
-			fileNameList = append(fileNameList, colorized)
-			fileLengthList = append(fileLengthList, fileLength)
+			
+			currentFileLength = len(file.Name()) // Obtains character length of the current file
+			fileNameList = append(fileNameList, colorized) // append the colorized file to the list
+			fileLengthList = append(fileLengthList, currentFileLength) // append the name
 
 			/* Finally, this is a good spot for getting some statistics on the totalCharLength
 			 * and maxCharLength of the files. */
 
-			if totalCharLength <= terminalWidth {
-				totalCharLength += fileLength + SPACING
+			if totalCharLength <= terminalWidth { // Determines if we can print on one line.
+				totalCharLength += currentFileLength + 2 // The additional 2 is for spacing.
 			} else {
 				printOneLine = false
 			}
 
-			if len(file.Name()) > maxCharLength {
-				maxCharLength = fileLength
+			if currentFileLength > maxCharLength { // Determines the longest file length.
+				maxCharLength = currentFileLength
 			}
 		}
 	}
@@ -156,23 +152,23 @@ func main() {
 	 * column, or send it to the printTopToBottom function for printing. */
 
 	switch {
-	case printOneLine: // If we can print everything on one line, do it.
+	case printOneLine:                              // If we can print everything on one row, do it.
 		for _, file := range fileNameList {
-			fmt.Print(file, "  ")
+			fmt.Print(file, "  ")           // Print the file plus additional spacing
 		}
-		fmt.Println(RESET) // Print an additional line and reset the color.
-	case *oneColumn: // If the -1 flag is set, print everything in one column.
+		fmt.Println(RESET)                      // Print an additional line and reset the color.
+	case *oneColumn:                                // If the -1 flag is set, print everything in one column.
 		for _, file := range fileNameList {
-			fmt.Println(file)
-			fmt.Print(RESET) // Same as above, except we do not need a new line here.
+			fmt.Println(file)               // Print the file and create a new line
+			fmt.Print(RESET)                // Same as above, except we do not need a new line here.
 		}
-	default: // Properly spaces our files and then prints from top to bottom.
+	default:                                        // Properly spaces our files and then prints from top to bottom.
 		spaced := make([]string, 0)
-		for index, file := range fileNameList {
+		for index, file := range fileNameList { // Preprocesses the file list for printing by adding spaces.
 			spaced = append(spaced, spacer(&file, fileLengthList[index]))
 		}
-		printTopToBottom(spaced) // Let's get printing!
-		fmt.Println(RESET) // Reset terminal at the end.
+		printTopToBottom(spaced)                // Let's get printing!
+		fmt.Println(RESET)                      // Reset terminal at the end.
 	}
 }
 
@@ -182,11 +178,11 @@ func main() {
 
 func filterHidden(file string) {
 	switch {
-	case *showHidden:
+	case *showHidden:                  // If the hidden flag is enabled
 		isHidden = false
-	case strings.HasPrefix(file, "."):
+	case strings.HasPrefix(file, "."): // If it is disabled and the file is hidden
 		isHidden = true
-	default:
+	default:                           // If it is disabled and the file is not hidden
 		isHidden = false
 	}
 }
@@ -233,15 +229,15 @@ func countRows(lastRowCount, maxColumns, numOfFiles *int) int {
 func printTopToBottom(spaced []string) {
   
 	/* The first thing that we need to know is how many columns we will be printing, how
- 	* many files are left over to be printed on the last row, and the number of rows that
- 	* we will be printing. */
+	* many files are left over to be printed on the last row, and the number of rows that
+	* we will be printing. */
   
-	numOfFiles := len(spaced)
-	maxColumns := terminalWidth / (maxCharLength + SPACING)
-	lastRowCount := numOfFiles % maxColumns
-	numOfRows := countRows(&lastRowCount, &maxColumns, &numOfFiles)
+	numOfFiles := len(spaced)                                       // Total number of files
+	maxColumns := terminalWidth / (maxCharLength + SPACING)         // Number of columns to print
+	lastRowCount := numOfFiles % maxColumns                         // Number of files on the last row
+	numOfRows := countRows(&lastRowCount, &maxColumns, &numOfFiles) // Number of rows to print
+	printing := true                                                // Turn the printer on by default
 	var currentRow, currentIndex int = 1, 0
-	printing := true // Set the initial value 
   
   /* This our magnificent printing press. It will first start on the default case, which
    * will print the majority of the files from the first row all the way to the next to
@@ -258,26 +254,26 @@ func printTopToBottom(spaced []string) {
    * Once we get to the last row, we can simply print everyting in an interval based on the
    * number of rows until we have printed the last file. */
   
-	for printing {
+	for printing {                                                   // Keep printing as long as the printer is turned on.
 		switch {
-		case currentRow < numOfRows: // Prints all rows except the last row.
+		case currentRow < numOfRows:                             // Prints all rows except the last row.
 			for column := 1; column < maxColumns; column++ { // Prints all but the last column.
-	  			fmt.Print(spaced[currentIndex])
-	  			if column >= lastRowCount + 1 { // This is where we see if it's time to switch our
-	    				currentIndex += numOfRows - 1 // interval to the number of rows minus one.
-	  			} else {
-	  				currentIndex += numOfRows
-	  			}
+				fmt.Print(spaced[currentIndex])          // Print the file.
+				if column >= lastRowCount + 1 {          // This is where we see if it's time to switch our index
+					currentIndex += numOfRows - 1    // interval to one less than then initial interval value.
+				} else {
+					currentIndex += numOfRows        // Select the next file in the index based on the row interval.
+				}
 			}
-			fmt.Println(spaced[currentIndex]) // Prints the final column in a row.
-			currentRow++ // It's time to start printing the next row.
-			currentIndex = currentRow - 1 // We need to reset this for the next row.
-		default: // Prints the final row.
-			for index := 1; index <= lastRowCount; index++ {
-	  			fmt.Print(spaced[currentIndex])
-	  			currentIndex += numOfRows
+			fmt.Println(spaced[currentIndex])                // Prints the final column in a row.
+			currentRow++                                     // It's time to start printing the next row.
+			currentIndex = currentRow - 1                    // We need to reset this for the next row.
+		default:                                                 // Prints the final row.
+			for index := 1; index <= lastRowCount; index++ { // This is the final print run.
+				fmt.Print(spaced[currentIndex])          // Print the file.
+				currentIndex += numOfRows                // Switch the index to the next file.
 			}
-			printing = false // We are finished printing.
+			printing = false                                 // We are finished printing -- turn the printing press off.
 		}
 	}
 }
