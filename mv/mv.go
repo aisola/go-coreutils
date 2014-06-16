@@ -2,17 +2,15 @@
 // mv.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
 //
-// Written By: Abram C. Isola
+// Written By: Abram C. Isola, Michael Murphy
 //
 package main
 
-import (
-	"bufio"
-	"flag"
-	"fmt"
-	"os"
-	"path/filepath"
-)
+import "bufio"
+import "flag"
+import "fmt"
+import "os"
+import "path/filepath"
 
 const (
 	help_text string = `
@@ -40,8 +38,6 @@ const (
 var (
 	forceEnabled = flag.Bool("f", false, "remove existing destination files and never prompt the user")
 	forceEnabledLong = flag.Bool("force", false, "remove existing destination files and never prompt the user")
-	help = flag.Bool("help", false, help_text)
-	version = flag.Bool("version", false, version_text)
 )
 
 // The input function prints a statement to the user and accepts an input, then returns the input.
@@ -134,6 +130,8 @@ func mover(originalLocation, newLocation string) {
 
 
 func main() {
+	help = flag.Bool("help", false, help_text)
+	version = flag.Bool("version", false, version_text)
 	flag.Parse()
 	if *forceEnabledLong { *forceEnabled = true } // We only need one instance of forceEnabled
 	
