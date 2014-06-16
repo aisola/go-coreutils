@@ -42,7 +42,7 @@ ln
 *logname
 *ls
 md5sum
-mkdir
+*mkdir
 mkfifo
 mknod
 mktemp
