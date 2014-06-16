@@ -262,8 +262,8 @@ func countRows(lastRowCount, maxColumns, numOfFiles *int) int {
 func printTopToBottom(spaced []string) {
   
   /* The first thing that we need to know is how many columns we will be printing, how
-  * many files are left over to be printed on the last row, and the number of rows that
-  * we will be printing. */
+   * many files are left over to be printed on the last row, and the number of rows that
+   * we will be printing. */
   
   numOfFiles := len(spaced)                                       // Total number of files
   maxColumns := terminalWidth / (maxCharLength + SPACING)         // Number of columns to print
@@ -273,19 +273,19 @@ func printTopToBottom(spaced []string) {
   var currentRow, currentIndex int = 1, 0
   
   /* This our magnificent printing press. It will first start on the default case, which
-  * will print the majority of the files from the first row all the way to the next to
-  * last row. The tricky party is trying to figure out an algorithm that allows us to
-  * print from top to bottom. To do this, we need to know how many files are left over
-  * on the last row.
-  * 
-  * For example, say you have three rows, eight columns, and the last row has four files.
-  * To get everything to play nicely together, we start by looping through the file list
-  * in intervals based on the number of rows (three in our example). However, at some point,
-  * the last row is going to kill our algorithm. To counter-act that, we need to switch it
-  * to counting in intervals of two after the fifth file has been printed on each row.
-  *
-  * Once we get to the last row, we can simply print everyting in an interval based on the
-  * number of rows until we have printed the last file. */
+   * will print the majority of the files from the first row all the way to the next to
+   * last row. The tricky party is trying to figure out an algorithm that allows us to
+   * print from top to bottom. To do this, we need to know how many files are left over
+   * on the last row.
+   * 
+   * For example, say you have three rows, eight columns, and the last row has four files.
+   * To get everything to play nicely together, we start by looping through the file list
+   * in intervals based on the number of rows (three in our example). However, at some point,
+   * the last row is going to kill our algorithm. To counter-act that, we need to switch it
+   * to counting in intervals of two after the fifth file has been printed on each row.
+   *
+   * Once we get to the last row, we can simply print everyting in an interval based on the
+   * number of rows until we have printed the last file. */
   
   for printing {                                       // Keep printing as long as the printer is turned on.
     if currentRow < numOfRows {                        // Prints all rows except the last row.
