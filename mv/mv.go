@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	forceEnabled = flag.Bool("f", false, "remove existing destination files and never prompt the user")
+	forceEnabled     = flag.Bool("f", false, "remove existing destination files and never prompt the user")
 	forceEnabledLong = flag.Bool("force", false, "remove existing destination files and never prompt the user")
 )
 
@@ -66,85 +66,86 @@ func fileExists(filep string) os.FileInfo {
 
 func argumentCheck(files []string) {
 	switch len(files) {
-		case 0:  // If there is no argument
-			fmt.Println("mv: missing file operand\nTry 'mv -help' for more information")
+	case 0: // If there is no argument
+		fmt.Println("mv: missing file operand\nTry 'mv -help' for more information")
+		os.Exit(0)
+	case 1: // If there is one argument
+		fmt.Printf("mv: missing destination file operand after '%s'\nTry 'mv -help' for more information.\n", files[0])
+		os.Exit(0)
+	case 2: // If there are two arguments
+		mover(files[0], files[1])
+	default: // If there are more than two arguments
+		to_file, files := files[len(files)-1], files[:len(files)-1]
+
+		if fp := fileExists(to_file); fp == nil || !fp.IsDir() {
+			fmt.Println("mv: when moving multiple files, last argument must be a directory")
 			os.Exit(0)
-		case 1:  // If there is one argument
-			fmt.Printf("mv: missing destination file operand after '%s'\nTry 'mv -help' for more information.\n", files[0])
-			os.Exit(0)
-		case 2:  // If there are two arguments
-			mover(files[0], files[1])
-		default: // If there are more than two arguments
-			to_file, files := files[len(files)-1], files[:len(files)-1]
-			
-			if fp := fileExists(to_file); fp == nil || !fp.IsDir() {
-				fmt.Println("mv: when moving multiple files, last argument must be a directory")
-				os.Exit(0)
-			} else {
-				fmt.Println(files)
-				for i := 0; i < len(files); i++ {
-					mover(files[i], to_file)
-				}
-				os.Exit(0)
+		} else {
+			fmt.Println(files)
+			for i := 0; i < len(files); i++ {
+				mover(files[i], to_file)
 			}
+			os.Exit(0)
+		}
 	}
 }
 
 /* The mover function will take two strings as an argument and move the original file/dir to
  * a new location. */
 
-func mover(originalLocation, newLocation string) {	
+func mover(originalLocation, newLocation string) {
 	fp := fileExists(newLocation)
-	
+
 	switch {
-		case fileExists(originalLocation) == nil: // If the original file does not exist
-			fmt.Printf("mv: cannot stat '%s': No such file or directory\n", originalLocation)
-			os.Exit(0)
-		case fp != nil && !*forceEnabled: // If the destination file does not exist and forceEnabled is disabled
-			if fp.IsDir() {
-				base := filepath.Base(originalLocation)
-				if fp2 := fileExists(newLocation + "/" + base); fp2 != nil && !*forceEnabled {
-					answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation + "/" + base)
-					if answer == "y\n" {
-						os.Rename(originalLocation, newLocation+"/"+base)
-					} else {
-						os.Exit(0)
-					}
-				} else if fp2 != nil && *forceEnabled {
-					os.Rename(originalLocation, newLocation+"/"+base)
-				} else if fp2 == nil {
-					os.Rename(originalLocation, newLocation+"/"+base)
-				}
-			} else {
-				answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation)
+	case fileExists(originalLocation) == nil: // If the original file does not exist
+		fmt.Printf("mv: cannot stat '%s': No such file or directory\n", originalLocation)
+		os.Exit(0)
+	case fp != nil && !*forceEnabled: // If the destination file does not exist and forceEnabled is disabled
+		if fp.IsDir() {
+			base := filepath.Base(originalLocation)
+			if fp2 := fileExists(newLocation + "/" + base); fp2 != nil && !*forceEnabled {
+				answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation+"/"+base)
 				if answer == "y\n" {
-					os.Rename(originalLocation, newLocation)
+					os.Rename(originalLocation, newLocation+"/"+base)
 				} else {
 					os.Exit(0)
 				}
+			} else if fp2 != nil && *forceEnabled {
+				os.Rename(originalLocation, newLocation+"/"+base)
+			} else if fp2 == nil {
+				os.Rename(originalLocation, newLocation+"/"+base)
 			}
-		default:                                         // If the destination file exists and forceEnabled is enabled,
-			os.Rename(originalLocation, newLocation) // or if the file does not exist, move it.
+		} else {
+			answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation)
+			if answer == "y\n" {
+				os.Rename(originalLocation, newLocation)
+			} else {
+				os.Exit(0)
+			}
+		}
+	default: // If the destination file exists and forceEnabled is enabled,
+		os.Rename(originalLocation, newLocation) // or if the file does not exist, move it.
 	}
 }
-
 
 func main() {
 	help = flag.Bool("help", false, help_text)
 	version = flag.Bool("version", false, version_text)
 	flag.Parse()
-	if *forceEnabledLong { *forceEnabled = true } // We only need one instance of forceEnabled
-	
+	if *forceEnabledLong {
+		*forceEnabled = true
+	} // We only need one instance of forceEnabled
+
 	if *help {
 		fmt.Println(help_text)
 		os.Exit(0)
 	}
-	
+
 	if *version {
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
-	
+
 	files := flag.Args()
 	argumentCheck(files)
 }
