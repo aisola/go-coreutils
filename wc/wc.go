@@ -54,19 +54,24 @@ const (
     LICENSE. This is free software, and you are welcome to redistribute 
     it under certain conditions in LICENSE.
 `
+	bytes_text      = "Print the byte counts"
+	characters_text = "Print the character counts"
+	lines_text      = "Print the newline counts"
+	words_text      = "Print the word counts"
+	linelength_text = "Print the length of the longest line"
 )
 
 var (
-	countBytes          = flag.Bool("c", false, "Print the byte counts")
-	countBytesLong      = flag.Bool("bytes", false, "Print the byte counts")
-	countCharacters     = flag.Bool("m", false, "Print the character counts")
-	countCharactersLong = flag.Bool("chars", false, "Print the character counts")
-	countLines          = flag.Bool("l", false, "Print the newline counts")
-	countLinesLong      = flag.Bool("lines", false, "Print the newline counts")
-	countWords          = flag.Bool("w", false, "Print the word counts")
-	countWordsLong      = flag.Bool("words", false, "Print the word counts")
-	maxLineLength       = flag.Bool("L", false, "Print the length of the longest line")
-	maxLineLengthLong   = flag.Bool("max-line-length", false, "Print the length of the longest line")
+	countBytes          = flag.Bool("c", false, bytes_text)
+	countBytesLong      = flag.Bool("bytes", false, bytes_text)
+	countCharacters     = flag.Bool("m", false, characters_text)
+	countCharactersLong = flag.Bool("chars", false, characters_text)
+	countLines          = flag.Bool("l", false, lines_text)
+	countLinesLong      = flag.Bool("lines", false, lines_text)
+	countWords          = flag.Bool("w", false, words_text)
+	countWordsLong      = flag.Bool("words", false, words_text)
+	maxLineLength       = flag.Bool("L", false, linelength_text)
+	maxLineLengthLong   = flag.Bool("max-line-length", false, linelength_text)
 )
 
 // The processFlags function will process the long forms of flags.
@@ -86,7 +91,8 @@ func processFlags() {
 	}
 }
 
-// The getFile function will get the file from flag arguments.
+/* errorChecker performs error handling via printing an error message and then
+ * cleanly exiting the program. */
 
 func errorChecker(input error, message string) {
 	if input != nil {
@@ -95,7 +101,7 @@ func errorChecker(input error, message string) {
 	}
 }
 
-// The openFile function will open the file.
+// The openFile function will open the file and check for errors.
 
 func openFile(s string) (io.ReadWriteCloser, error) {
 	fi, err := os.Stat(s)
@@ -107,7 +113,10 @@ func openFile(s string) (io.ReadWriteCloser, error) {
 	return os.Open(s)
 }
 
-// Count the maximum string length for the maxLineLength case.
+/* To find the maximum string length, we must loop through a newline-delimited
+ * string while counting the length of each line with len(). If the line is
+ * longer than the longest recorded line before it, maxStringLength will be
+ * updated to reflect it. */
 
 func countMaxStringLength(input []string) int {
 	var maxStringLength int
@@ -119,9 +128,10 @@ func countMaxStringLength(input []string) int {
 	return maxStringLength
 }
 
-// The outputPrinter function will take the buffered input and process it.
+/* The bufferProcessor function will take the buffered input and process it
+ * uniquely based on which flag was given to the program. */
 
-func outputPrinter(fileName *string, buffer *bytes.Buffer) {
+func bufferProcessor(fileName *string, buffer *bytes.Buffer) {
 	switch {
 	case *countLines: // Print the number of lines
 		fmt.Println(strings.Count(buffer.String(), "\n"), *fileName)
@@ -133,6 +143,8 @@ func outputPrinter(fileName *string, buffer *bytes.Buffer) {
 		fmt.Println(buffer.Len(), *fileName)
 	case *maxLineLength: // Print the length of the longest line
 		fmt.Println(countMaxStringLength(strings.Split(buffer.String(), "\n")), *fileName)
+	default:
+		fmt.Println(strings.Count(buffer.String(), "\n"), len(strings.Fields(buffer.String())), buffer.Len(), *fileName)
 	}
 }
 
@@ -140,6 +152,7 @@ func main() {
 	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()
+	processFlags() // Process long-form flags to their short-form variants.
 	args := flag.Args()
 	buffer := bytes.NewBuffer(nil) // Used to buffer the input
 
@@ -170,5 +183,5 @@ func main() {
 		file.Close()
 	}
 
-	outputPrinter(&args[0], buffer) // Send the buffer for processing.
+	bufferProcessor(&args[0], buffer) // Send the buffer for processing.
 }
