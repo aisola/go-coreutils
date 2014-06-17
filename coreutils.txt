@@ -97,7 +97,7 @@ unlink
 *uptime
 users
 vdir
-wc
+*wc
 who
 *whoami
 *yes
