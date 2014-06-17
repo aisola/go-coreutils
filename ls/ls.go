@@ -67,9 +67,9 @@ func main() {
 	//fileGroupList := make([]string, 0)
 	fileModDateList := make([]time.Time, 0)
 	fileSizeList := make([]int64, 0)
-
-	help = flag.Bool("help", false, help_text)
-	version = flag.Bool("version", false, version_text)
+	
+	help := flag.Bool("help", false, help_text)
+	version := flag.Bool("version", false, version_text)
 	flag.Parse()      // Parse flags
 	path := getPath() // Obtains the path to search
 
@@ -90,10 +90,7 @@ func main() {
 	 * does not exist, an error is printed and the program exits. */
 
 	directory, err := ioutil.ReadDir(path)
-	if err != nil {
-		fmt.Print("ls: ", path, " - No such file or directory\n")
-		return
-	}
+	errorChecker(&err, "ls: " + path + " - No such file or directory.\n")
 
 	/* This for loop will loop through each file in the directory in ascending order
 	 * and call the filterHidden function to determine whether or not it should
@@ -145,8 +142,7 @@ func main() {
 		}
 	}
 
-	/* This switch will determine whether we should print everything in one line, in one
-	 * column, or send it to the printTopToBottom function for printing. */
+	// This switch will determine how we should print.
 
 	switch {
 	case *longMode: // If longMode is enabled
@@ -195,12 +191,22 @@ func getTerminalWidth() uint { // Obtains the current width of the terminal.
 	return uint(ws.Col)
 }
 
-// If there is no argument, set the directory path to "./"
+func errorChecker(err *error, message string) {
+	if *err != nil {
+		fmt.Print(message)
+		os.Exit(0)
+	}
+}
+
+// If there is no argument, set the directory path to the current working directory
 
 func getPath() string {
 	args := flag.Args()
+	
 	if len(args) < 1 {
-		return "./"
+		path, err := os.Getwd()
+		errorChecker(&err, "ls: Could not obtain the current working directory.\n")
+		return path
 	} else {
 		return args[0]
 	}
@@ -260,7 +266,6 @@ func countRows(lastRowCount, maxColumns, numOfFiles *int) int {
  * files from top to bottom. */
 
 func printTopToBottom(spaced []string) {
-
 	/* The first thing that we need to know is how many columns we will be printing, how
 	 * many files are left over to be printed on the last row, and the number of rows that
 	 * we will be printing. */
@@ -309,6 +314,8 @@ func printTopToBottom(spaced []string) {
 		}
 	}
 }
+
+// The longModePrinter function prints files and their statistics one line at a time.
 
 func longModePrinter(fileName string, fileSize int64, fileDate time.Time) {
 	fmt.Printf("%10d %s %s\n", fileSize, fileDate, fileName+RESET)
