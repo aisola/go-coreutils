@@ -129,23 +129,30 @@ func mover(originalLocation, newLocation string) {
 }
 
 func main() {
-	help = flag.Bool("help", false, help_text)
-	version = flag.Bool("version", false, version_text)
+	help := flag.Bool("help", false, help_text)
+	version := flag.Bool("version", false, version_text)
 	flag.Parse()
+	
+	// We only need one instance of forceEnabled
+	
 	if *forceEnabledLong {
 		*forceEnabled = true
-	} // We only need one instance of forceEnabled
-
+	}
+	
+	// Display help information
+	
 	if *help {
 		fmt.Println(help_text)
 		os.Exit(0)
 	}
-
+	
+	// Display version information
+	
 	if *version {
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
 
-	files := flag.Args()
-	argumentCheck(files)
+	files := flag.Args() // Obtain a list of files.
+	argumentCheck(files) // Check the number of arguments and process them.
 }
