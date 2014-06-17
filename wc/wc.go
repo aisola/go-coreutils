@@ -123,17 +123,16 @@ func countMaxStringLength(input []string) int {
 
 func outputPrinter(fileName *string, buffer *bytes.Buffer) {
 	switch {
-	case *maxLineLength: // Print the length of the longest line
-		fmt.Println(countMaxStringLength(strings.Split(buffer.String(), "\n")), *fileName)
-	}
+	case *countLines: // Print the number of lines
+		fmt.Println(strings.Count(buffer.String(), "\n"), *fileName)
 	case *countWords: // Print the number of words
 		fmt.Println(len(strings.Fields(buffer.String())), *fileName)
 	case *countCharacters: // Print the number of characters (same as bytes?)
 		fmt.Println(buffer.Len(), *fileName)
 	case *countBytes: // Print the number of bytes
 		fmt.Println(buffer.Len(), *fileName)
-	case *countLines: // Print the number of lines
-		fmt.Println(strings.Count(buffer.String(), "\n"), *fileName)
+	case *maxLineLength: // Print the length of the longest line
+		fmt.Println(countMaxStringLength(strings.Split(buffer.String(), "\n")), *fileName)
 	}
 }
 
