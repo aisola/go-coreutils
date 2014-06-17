@@ -134,9 +134,6 @@ func outputPrinter(fileName *string, buffer *bytes.Buffer) {
 		fmt.Println(buffer.Len(), *fileName)
 	case *countLines: // Print the number of lines
 		fmt.Println(strings.Count(buffer.String(), "\n"), *fileName)
-
-
-	
 	}
 }
 
