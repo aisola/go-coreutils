@@ -102,6 +102,7 @@ func main() {
 	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()
+	processFlags()
 	helpCheck(help)
 	versionCheck(version)
 	var fileBase string
