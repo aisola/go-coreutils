@@ -9,7 +9,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -21,6 +20,7 @@ const (
         --version     output version information and exit
         --parents     create parent directory/directories as 
                       needed, do nothing if already existing
+        --verbose     print a message for each created directory
   `
 
 	version_text = `
@@ -37,13 +37,16 @@ const (
     already exist, do nothing. 
   `
 
-	usage_text = `usage: mkdir [-parents] directory ...`
+	usage_text = `usage: mkdir [-parents, -verbose] directory ...`
+
+	verbose_text = `Print a message for each created directory.`
 )
 
 var (
 	help    = flag.Bool("help", false, help_text)
 	version = flag.Bool("version", false, version_text)
 	parents = flag.Bool("parents", false, parents_text)
+	verbose = flag.Bool("verbose", false, verbose_text)
 )
 
 func main() {
@@ -69,13 +72,17 @@ func main() {
 			mkdirAllError := os.MkdirAll(flag.Arg(i), os.ModePerm)
 
 			if mkdirAllError != nil {
-				log.Fatalln(mkdirAllError)
+				fmt.Println(mkdirAllError)
+			} else if *verbose {
+				fmt.Printf("%s\n", flag.Arg(i))
 			}
 		} else {
 			mkdirError := os.Mkdir(flag.Arg(i), os.ModePerm)
 
 			if mkdirError != nil {
-				log.Fatalln(mkdirError)
+				fmt.Println(mkdirError)
+			} else if *verbose {
+				fmt.Printf("mkdir: created directory '%s'\n", flag.Arg(i))
 			}
 		}
 	}
