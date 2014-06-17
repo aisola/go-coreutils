@@ -88,9 +88,10 @@ func processFlags() {
 
 // The getFile function will get the file from flag arguments.
 
-func errorChecker(input error) {
+func errorChecker(input error, message string) {
 	if input != nil {
-		panic(input)
+		fmt.Println(message)
+		os.Exit(0)
 	}
 }
 
@@ -98,7 +99,7 @@ func errorChecker(input error) {
 
 func openFile(s string) (io.ReadWriteCloser, error) {
 	fi, err := os.Stat(s)
-	errorChecker(err)
+	errorChecker(err, "wc: "+s+": No such file or directory")
 	
 	if fi.Mode()&os.ModeSocket != 0 {
 		return net.Dial("unix", s)
@@ -164,7 +165,7 @@ func main() {
 		io.Copy(os.Stdout, os.Stdin)
 	} else {
 		file, err := openFile(args[0])
-		errorChecker(err)
+		errorChecker(err, "wc: "+args[0]+": No such file or directory")
 		io.Copy(buffer, file)
 		file.Close()
 	}
