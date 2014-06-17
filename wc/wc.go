@@ -100,7 +100,7 @@ func errorChecker(input error, message string) {
 func openFile(s string) (io.ReadWriteCloser, error) {
 	fi, err := os.Stat(s)
 	errorChecker(err, "wc: "+s+": No such file or directory")
-	
+
 	if fi.Mode()&os.ModeSocket != 0 {
 		return net.Dial("unix", s)
 	}
@@ -142,16 +142,16 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 	buffer := bytes.NewBuffer(nil) // Used to buffer the input
-	
+
 	// Display help information
 
 	if *help {
 		fmt.Println(help_text)
 		os.Exit(0)
 	}
-	
+
 	// Display version information
-	
+
 	if *version {
 		fmt.Println(version_text)
 		os.Exit(0)
@@ -160,7 +160,7 @@ func main() {
 	/* If no file is given, or the file is -, read standard input
 	 * and output to standard output. Otherwise, open the file and
 	 * begin reading it. */
-	
+
 	if len(args) < 1 || args[0] == "-" {
 		io.Copy(os.Stdout, os.Stdin)
 	} else {
@@ -169,6 +169,6 @@ func main() {
 		io.Copy(buffer, file)
 		file.Close()
 	}
-	
+
 	outputPrinter(&args[0], buffer) // Send the buffer for processing.
 }

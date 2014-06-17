@@ -67,7 +67,7 @@ func main() {
 	//fileGroupList := make([]string, 0)
 	fileModDateList := make([]time.Time, 0)
 	fileSizeList := make([]int64, 0)
-	
+
 	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()      // Parse flags
@@ -90,7 +90,7 @@ func main() {
 	 * does not exist, an error is printed and the program exits. */
 
 	directory, err := ioutil.ReadDir(path)
-	errorChecker(&err, "ls: " + path + " - No such file or directory.\n")
+	errorChecker(&err, "ls: "+path+" - No such file or directory.\n")
 
 	/* This for loop will loop through each file in the directory in ascending order
 	 * and call the filterHidden function to determine whether or not it should
@@ -202,7 +202,7 @@ func errorChecker(err *error, message string) {
 
 func getPath() string {
 	args := flag.Args()
-	
+
 	if len(args) < 1 {
 		path, err := os.Getwd()
 		errorChecker(&err, "ls: Could not obtain the current working directory.\n")

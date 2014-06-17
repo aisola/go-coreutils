@@ -132,22 +132,22 @@ func main() {
 	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()
-	
+
 	// We only need one instance of forceEnabled
-	
+
 	if *forceEnabledLong {
 		*forceEnabled = true
 	}
-	
+
 	// Display help information
-	
+
 	if *help {
 		fmt.Println(help_text)
 		os.Exit(0)
 	}
-	
+
 	// Display version information
-	
+
 	if *version {
 		fmt.Println(version_text)
 		os.Exit(0)
