@@ -40,10 +40,10 @@ const (
         -l, -lines
               print the newline counts
               
-        -L, --max-line-length
+        -L, -max-line-length
               print the length of the longest line
               
-        -w, --words
+        -w, -words
               print the word counts
 `
 	version_text = `
@@ -170,5 +170,4 @@ func main() {
 	}
 	
 	outputPrinter(&args[0], buffer) // Send the buffer for processing.
-	
 }
