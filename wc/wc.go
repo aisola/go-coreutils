@@ -18,7 +18,6 @@ import "strings"
 const (
 	help_text string = `
     Usage: wc [OPTION]... [FILE]...
-       or: wc [OPTION]... --fileles0-from=F
        
     Print newline, word, and byte counts for each FILE, and a total line if
     more than one FILE is specifileed. With no FILE, or when FILE is -,
