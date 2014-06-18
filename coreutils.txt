@@ -32,7 +32,7 @@ factor
 fmt
 fold
 groups
-head
+*head
 hostid
 id
 install
@@ -80,7 +80,7 @@ su
 sum
 sync
 tac
-tail
+*tail
 tee
 *touch
 test
