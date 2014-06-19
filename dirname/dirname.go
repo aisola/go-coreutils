@@ -44,60 +44,46 @@ var (
 	zeroLong = flag.Bool("zero", false, zero_text)
 )
 
-// Display help information
-
-func helpCheck() {
+// If zeroLong is enabled, set zero to enabled.
+func processFlags() {
+	if *version {
+		fmt.Println(version_text)
+		os.Exit(0)
+	}
+	if *zeroLong {
+		*zero = true
+	}
 	if *help {
 		fmt.Println(help_text)
 		os.Exit(0)
 	}
 }
 
-// Display version information
-
-func versionCheck() {
-	if *version {
-		fmt.Println(version_text)
-		os.Exit(0)
-	}
+// Return the dirname
+func getDirName() string {
+	return filepath.Dir(filepath.Clean(file))
 }
 
-// If zeroLong is enabled, set zero to enabled.
-
-func processFlags() {
-	if *zeroLong {
-		*zero = true
+/* If the number of arguments given is zero, print the help text.
+ * Otherwise check if the zero flag is set and print the dirname
+ * of each file. */
+func argumentCheck() {
+	if flag.NArg() < 1 {
+		fmt.Println(help_text)
+		os.Exit(0)
+	} else {
+		for _, file := range flag.Args() {
+			if *zero {
+				fmt.Print(getDirName())
+			} else {
+				fmt.Println(getDirName())
+			}
+		}
 	}
 }
 
 func main() {
 	flag.Parse()
 	processFlags()
-	helpCheck()
-	versionCheck()
-
-	/* If the number of arguments given is zero, print the help text.
-	 * Otherwise check if the zero flag is set and print the dirname
-	 * of each file. */
-
-	if flag.NArg() < 1 {
-		fmt.Println(help_text)
-		os.Exit(0)
-	} else {
-		/* NOTE(ttacon): we need to clean the directory first
-		 * as filepath.Dir will not remove the last directory
-		 * of the path the way dirname will if it ends in
-		 * a trailing slash - e.g.:
-		 *
-		 * filepath.Dir("/Users/ttacon/") == "/Users/ttacon/"
-		 * while '$ dirname /Users/ttacon/' == /Users */
-
-		for _, file := range flag.Args() {
-			if *zero {
-				fmt.Print(filepath.Dir(filepath.Clean(file)))
-			} else {
-				fmt.Println(filepath.Dir(filepath.Clean(file)))
-			}
-		}
-	}
+	argumentCheck()
 }
