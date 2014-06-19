@@ -1,6 +1,6 @@
 This is a list of the original GNU Coreutils.
 
-(* indiates its current implementation in go-coreutils.)
+(* indicates its current implementation in go-coreutils.)
 
 *arch
 *base64
@@ -16,7 +16,7 @@ comm
 cp
 csplit
 cut
-date
+*date
 dd
 df
 dir
