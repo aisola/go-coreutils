@@ -60,7 +60,7 @@ func processFlags() {
 }
 
 // Return the dirname
-func getDirName() string {
+func getDirName(file string) string {
 	return filepath.Dir(filepath.Clean(file))
 }
 
@@ -74,9 +74,9 @@ func argumentCheck() {
 	} else {
 		for _, file := range flag.Args() {
 			if *zero {
-				fmt.Print(getDirName())
+				fmt.Print(getDirName(file))
 			} else {
-				fmt.Println(getDirName())
+				fmt.Println(getDirName(file))
 			}
 		}
 	}
