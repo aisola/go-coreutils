@@ -253,7 +253,7 @@ func printTopToBottom(fileList []string) {
 	numOfRows := countRows(&lastRowCount, &maxColumns, &numOfFiles) // Number of rows to print
 	printing := true                                                // Turn the printer on by default
 	var currentRow, currentIndex int = 1, 0
-	printingLayout := "%-"+fmt.Sprintf("%d", maxCharLength+SPACING)+"s"
+	printingLayout := "%-"+fmt.Sprintf("%d", maxCharLength+SPACING+7)+"s"
 
 	/* This our magnificent printing press. It will first start on the default case, which
 	 * will print the majority of the files from the first row all the way to the next to
