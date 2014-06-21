@@ -1,6 +1,6 @@
 GO-Coreutils
 ------------
-This is a Go1 implimentation of the GNU Coreutils.
+This is a Go1 implementation of the GNU Coreutils.
 
 All files are maintained by: Abram C. Isola
 
@@ -19,9 +19,14 @@ via git...
 ### Known Issues
 
 + Incomplete flags : Not all commands have the flags you may expect.
-+ Large Binary Size: This is a Go issue... The binary sizes have been 
-going up. Even Rob Pike has said that this has got to be fixed by the 
-Go team.
++ Large Binary Size: If file size of the binary is a concern, use the
+gcc-go compiler instead: go build -compiler gccgo. The downside,
+however, is that gccgo compiles binaries that are slower than gc.
+Binaries compiled with the default gc binary have approximately 2MiB
+of overhead. New releases of Go are working on improving the binary
+sizes, as can be seen with the recently released Go 1.3 which reduced
+binary sizes by 18.73% for this project (63.2 MiB to 51.4 MiB).
+
 
 
 ### Legal
