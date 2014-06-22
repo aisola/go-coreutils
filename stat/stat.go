@@ -2,7 +2,7 @@
 // stat.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
 //
-// Written By: Abram C. Isola
+// Written By: Abram C. Isola, Michael Murphy
 //
 package main
 
