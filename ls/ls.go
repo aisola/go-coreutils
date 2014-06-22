@@ -207,15 +207,11 @@ func dateFormatCheck(fileModTime time.Time) string {
 func bufferUsers() *bytes.Buffer {
 	buffer := bytes.NewBuffer(nil)
 
-	// Check to see if the file exists
-	_, err := os.Stat("/etc/passwd")
+	cached, _ := os.Open("/etc/passwd")
 	if err != nil {
-		fmt.Println("Error: /etc/passwd file does not exist.")
+		fmt.Println("Error: passwd file does not exist.")
 		os.Exit(0)
 	}
-
-	// Cache the contents of /etc/group into a buffer
-	cached, _ := os.Open("/etc/passwd")
 	io.Copy(buffer, cached)
 	return buffer
 }
@@ -224,15 +220,12 @@ func bufferUsers() *bytes.Buffer {
 func bufferGroups() *bytes.Buffer {
 	buffer := bytes.NewBuffer(nil)
 
-	// Check to see if the file exists
-	_, err := os.Stat("/etc/group")
+	cached, _ := os.Open("/etc/group")
 	if err != nil {
-		fmt.Println("Error: /etc/group file does not exist.")
+		fmt.Println("Error: group file does not exist.")
 		os.Exit(0)
 	}
-
-	// Cache the contents of /etc/group into a buffer
-	cached, _ := os.Open("/etc/group")
+	
 	io.Copy(buffer, cached)
 	return buffer
 }
