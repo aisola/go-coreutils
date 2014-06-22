@@ -207,7 +207,7 @@ func dateFormatCheck(fileModTime time.Time) string {
 func bufferUsers() *bytes.Buffer {
 	buffer := bytes.NewBuffer(nil)
 
-	cached, _ := os.Open("/etc/passwd")
+	cached, err := os.Open("/etc/passwd")
 	if err != nil {
 		fmt.Println("Error: passwd file does not exist.")
 		os.Exit(0)
@@ -220,7 +220,7 @@ func bufferUsers() *bytes.Buffer {
 func bufferGroups() *bytes.Buffer {
 	buffer := bytes.NewBuffer(nil)
 
-	cached, _ := os.Open("/etc/group")
+	cached, err := os.Open("/etc/group")
 	if err != nil {
 		fmt.Println("Error: group file does not exist.")
 		os.Exit(0)
