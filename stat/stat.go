@@ -77,13 +77,11 @@ func getAdditionalFileStat(fi os.FileInfo) *syscall.Stat_t {
 func bufferUsers() *bytes.Buffer {
 	buffer := bytes.NewBuffer(nil)
 
-	// Cache the contents of /etc/group into a buffer
-	cached, _ := os.Open("/etc/passwd")
+	cached, err := os.Open("/etc/passwd")
 	if err != nil {
-		fmt.Println("Error: group file does not exist.")
+		fmt.Println("Error: passwd file does not exist.")
 		os.Exit(0)
 	}
-
 	io.Copy(buffer, cached)
 	return buffer
 }
@@ -92,8 +90,7 @@ func bufferUsers() *bytes.Buffer {
 func bufferGroups() *bytes.Buffer {
 	buffer := bytes.NewBuffer(nil)
 
-	// Cache the contents of /etc/group into a buffer
-	cached, _ := os.Open("/etc/group")
+	cached, err := os.Open("/etc/group")
 	if err != nil {
 		fmt.Println("Error: group file does not exist.")
 		os.Exit(0)
