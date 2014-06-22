@@ -57,8 +57,8 @@ func processFlags() {
 }
 
 // Obtain file statistics
-func getFileStat() os.FileInfo {
-	fi, err := os.Lstat(flag.Arg(0))
+func getFileStat(index int) os.FileInfo {
+	fi, err := os.Lstat(flag.Arg(index))
 	if err != nil {
 		fmt.Printf("stat: fatal: could not open '%s': %s\n", flag.Arg(0), err)
 		os.Exit(0)
@@ -105,8 +105,8 @@ func timespecToTime(ts syscall.Timespec) time.Time {
 // If the file is a symbolic link, check if dereference mode is enabled.
 // If dereference mode is enabled, only the path of the symbolic link is printed.
 // If it is not enabled, the symlink and it's path will be printed side by side.
-func dereferenceCheck(file os.FileInfo) {
-	symPath, _ := os.Readlink(flag.Arg(0))
+func dereferenceCheck(file os.FileInfo, index int) {
+	symPath, _ := os.Readlink(flag.Arg(index))
 	if *dereference {
 		fmt.Printf("  File: '%s'\n", symPath)
 	} else {
@@ -117,7 +117,7 @@ func dereferenceCheck(file os.FileInfo) {
 // Checks whether the file is a symbolic link and prints the file name line.
 func printFileName(file os.FileInfo, index int) {
 	if getType(file) == "symbolic link" {
-		dereferenceCheck(file)
+		dereferenceCheck(file, index int)
 	} else {
 		fmt.Printf("  File: '%s'\n", file.Name())
 	}
@@ -142,7 +142,7 @@ func defaultMode(fi os.FileInfo, sys *syscall.Stat_t, usr *user.User, index int)
 // Loops through each argument given.
 func argumentLoop() {
 	for index := 0; index < flag.NArg(); index++ {
-		fi := getFileStat()              // Get file stats
+		fi := getFileStat(index)              // Get file stats
 		sys := getAdditionalFileStat(fi) // Get lower level file statistics.
 		usr := getUserInfo(sys)          // Get user information
 		defaultMode(fi, sys, usr, index) // Send file information for printing.
