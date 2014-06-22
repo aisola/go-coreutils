@@ -6,10 +6,11 @@
 //
 package main
 
+import "bytes"
 import "fmt"
+import "io"
 import "io/ioutil"
 import "os"
-import "os/user"
 import "strings"
 import "flag"
 import "unsafe"
@@ -202,16 +203,48 @@ func dateFormatCheck(fileModTime time.Time) string {
 	}
 }
 
-// Converts uid/gid into names.
-// NOTE: For some reason this makes the entire program 5x slower.
-// Therefore, it is currently disabled until a solution is found.
-func idToName(id string) string {
-	name, err := user.LookupId(id)
-	if err == nil {
-		return name.Username // Returns the name represented as an actual name.
-	} else {
-		return id // Returns the name represented in numerical format.
+// Opens the passwd file and returns a buffer of it's contents.
+func bufferUsers() *bytes.Buffer {
+	buffer := bytes.NewBuffer(nil)
+
+	// Check to see if the file exists
+	_, err := os.Stat("/etc/passwd")
+	if err != nil {
+		fmt.Println("Error: /etc/passwd file does not exist.")
+		os.Exit(0)
 	}
+
+	// Cache the contents of /etc/group into a buffer
+	cached, _ := os.Open("/etc/passwd")
+	io.Copy(buffer, cached)
+	return buffer
+}
+
+// Opens the group file and returns a buffer of it's contents.
+func bufferGroups() *bytes.Buffer {
+	buffer := bytes.NewBuffer(nil)
+
+	// Check to see if the file exists
+	_, err := os.Stat("/etc/group")
+	if err != nil {
+		fmt.Println("Error: /etc/group file does not exist.")
+		os.Exit(0)
+	}
+
+	// Cache the contents of /etc/group into a buffer
+	cached, _ := os.Open("/etc/group")
+	io.Copy(buffer, cached)
+	return buffer
+}
+
+// Converts a bytes buffer into a newline-separated string array.
+func bufferToStringArray(buffer *bytes.Buffer) []string {
+	return strings.Split(buffer.String(), "\n")
+}
+
+// Returns a colon separated string array for use in parsing /etc/group and /etc/user
+func parseLine(line string) []string {
+	return strings.Split(line, ":")
 }
 
 // Returns user id
@@ -232,6 +265,34 @@ func getModDateList(done chan bool) {
 	done <- true
 }
 
+// Returns the username associated to a user ID
+func lookupUserID(uid string, userStringArray []string) string {
+	for _, line := range userStringArray {
+		values := parseLine(line)
+		if len(values) > 2 {
+			if values[2] == uid {
+				return values[0]
+			}
+		}
+
+	}
+	return uid
+}
+
+// Returns the groupname associated to a group ID
+func lookupGroupID(gid string, groupStringArray []string) string {
+	for _, line := range groupStringArray {
+		values := parseLine(line)
+		if len(values) > 2 {
+			if values[2] == gid {
+				return values[0]
+			}
+		}
+
+	}
+	return gid
+}
+
 // Obtains a list of file sizes.
 func getFileSize(done chan bool) {
 	for _, file := range fileList {
@@ -240,13 +301,25 @@ func getFileSize(done chan bool) {
 	done <- true
 }
 
-// Obtains a list of user and group names/ids.
-func getUserGroupList(done chan bool) {
+// Obtains a list of user names
+func getUserList(done chan bool) {
+	userBuffer := bufferToStringArray(bufferUsers())
+	
 	for _, file := range fileList {
-		uid, gid := getUID(file), getGID(file)
+		uid := lookupUserID(getUID(file), userBuffer)
 
-		countIDLength(uid, gid)
 		fileUserList = append(fileUserList, uid)
+	}
+	done <- true
+}
+
+// Obtains a list of group names
+func getGroupList(done chan bool) {
+	groupBuffer := bufferToStringArray(bufferGroups())
+	
+	for _, file := range fileList {
+		gid := lookupGroupID(getGID(file), groupBuffer)
+		
 		fileGroupList = append(fileGroupList, gid)
 	}
 	done <- true
@@ -294,9 +367,9 @@ func getMaxCharacterLength(done chan bool) {
 
 // Determines the max character length of file size and user/group names/ids.
 func countMaxSizeLength(done chan bool) {
-	for _, file := range fileList {
+	for index, file := range fileList {
 		countSizeLength(file.Size())
-		countIDLength(getUID(file), getGID(file))
+		countIDLength(fileUserList[index], fileGroupList[index])
 	}
 	done <- true
 }
@@ -336,9 +409,7 @@ func printOneLineCheck(done chan bool) {
 // NOTE: The printing-related functions are below.
 func longModePrinter() {
 	// Print number of files in the directory
-	go func() {
-		fmt.Println("total:", len(fileList))
-	}()
+	fmt.Println("total:", len(fileList))
 
 	ownershipLayout := fmt.Sprintf("%d", maxIDLength)
 	sizeLayout := fmt.Sprintf("%d", maxSizeLength)
@@ -480,19 +551,24 @@ func main() {
 		modeDone := make(chan bool)
 		modDateDone := make(chan bool)
 		sizeDone := make(chan bool)
-		userGroupDone := make(chan bool)
+		userDone := make(chan bool)
+		groupDone := make(chan bool)
 		countDone := make(chan bool)
 		
 		go getModeTypeList(modeDone)
 		go getModDateList(modDateDone)
 		go getFileSize(sizeDone)
-		go getUserGroupList(userGroupDone)
+		go getUserList(userDone)
+		go getGroupList(groupDone)
 		
+		<-userDone
+		<-groupDone
 		<-sizeDone
 		go countMaxSizeLength(countDone)
 		<-modeDone
 		<-modDateDone
-		<-userGroupDone
+		<-countDone
+		fmt.Println(maxIDLength)
 	}
 	
 	// Synchronize goroutines with main
