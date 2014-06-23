@@ -40,6 +40,12 @@ const (
         -l, -lines
               print the newline counts
               
+        -sloc
+              print the source lines of code
+              
+        -o
+              print the occurrences of a particular letter, word or phrase
+              
         -L, -max-line-length
               print the length of the longest line
               
@@ -54,11 +60,13 @@ const (
     LICENSE. This is free software, and you are welcome to redistribute 
     it under certain conditions in LICENSE.
 `
-	bytes_text      = "Print the byte counts"
-	characters_text = "Print the character counts"
-	lines_text      = "Print the newline counts"
-	words_text      = "Print the word counts"
-	linelength_text = "Print the length of the longest line"
+	bytes_text       = "Print the byte counts"
+	characters_text  = "Print the character counts"
+	lines_text       = "Print the newline counts"
+	sloc_text        = "Print the source lines of code"
+	words_text       = "Print the word counts"
+	occurrences_text = "Print the occurrences of a particular word or phrase"
+	linelength_text  = "Print the length of the longest line"
 )
 
 var (
@@ -68,6 +76,8 @@ var (
 	countCharactersLong = flag.Bool("chars", false, characters_text)
 	countLines          = flag.Bool("l", false, lines_text)
 	countLinesLong      = flag.Bool("lines", false, lines_text)
+	countSLOC           = flag.Bool("sloc", false, sloc_text)
+	occurrenceReference = flag.String("o", "", occurrences_text)
 	countWords          = flag.Bool("w", false, words_text)
 	countWordsLong      = flag.Bool("words", false, words_text)
 	maxLineLength       = flag.Bool("L", false, linelength_text)
@@ -75,7 +85,6 @@ var (
 )
 
 // The processFlags function will process the long forms of flags.
-
 func processFlags() {
 	switch {
 	case *countBytesLong:
@@ -91,9 +100,8 @@ func processFlags() {
 	}
 }
 
-/* errorChecker performs error handling via printing an error message and then
- * cleanly exiting the program. */
-
+// errorChecker performs error handling via printing an error message and then
+// cleanly exiting the program.
 func errorChecker(input error, message string) {
 	if input != nil {
 		fmt.Println(message)
@@ -102,7 +110,6 @@ func errorChecker(input error, message string) {
 }
 
 // The openFile function will open the file and check for errors.
-
 func openFile(s string) (io.ReadWriteCloser, error) {
 	fi, err := os.Stat(s)
 	errorChecker(err, "wc: "+s+": No such file or directory")
@@ -117,7 +124,6 @@ func openFile(s string) (io.ReadWriteCloser, error) {
  * string while counting the length of each line with len(). If the line is
  * longer than the longest recorded line before it, maxStringLength will be
  * updated to reflect it. */
-
 func countMaxStringLength(input []string) int {
 	var maxStringLength int
 	for _, line := range input {
@@ -128,9 +134,51 @@ func countMaxStringLength(input []string) int {
 	return maxStringLength
 }
 
+// Converts a bytes buffer into a newline-separated string array.
+func bufferToStringArray(buffer *bytes.Buffer) []string {
+	return strings.Split(buffer.String(), "\n")
+}
+
+// Removes empty spaces from the end and beginning of lines
+func removeSpaces(line string) string {
+	return strings.TrimSpace(line)
+}
+
+// Checks if the line is empty, and returns true if true
+func isEmptyLine(line string) bool {
+	if len(line) < 1 {
+		return true
+	}
+	return false
+}
+
+// Checks if the line is a comment, and returns true if true.
+func isComment(line string) bool {
+	hasprefix := strings.HasPrefix
+	return hasprefix(line, "//") || hasprefix(line, "* ") ||
+		hasprefix(line, "/*") || hasprefix(line, "*/")
+}
+
+// Counts the source lines of code
+func slocCounter(buffer *bytes.Buffer) int {
+	lines := bufferToStringArray(buffer)
+	var count int
+	
+	for _, line := range lines {
+		if !isEmptyLine(line) && !isComment(line) {
+			count++
+		}
+	}
+	return count
+}
+
+// Counts the number of occurences of occurrenceReference.
+func occurrenceCounter(buffer *bytes.Buffer) int {
+	return strings.Count(buffer.String(), *occurrenceReference)
+}
+
 /* The bufferProcessor function will take the buffered input and process it
  * uniquely based on which flag was given to the program. */
-
 func bufferProcessor(fileName *string, buffer *bytes.Buffer) {
 	switch {
 	case *countLines: // Print the number of lines
@@ -143,6 +191,10 @@ func bufferProcessor(fileName *string, buffer *bytes.Buffer) {
 		fmt.Println(buffer.Len(), *fileName)
 	case *maxLineLength: // Print the length of the longest line
 		fmt.Println(countMaxStringLength(strings.Split(buffer.String(), "\n")), *fileName)
+	case *countSLOC:
+		fmt.Println(slocCounter(buffer), *fileName)
+	case len(*occurrenceReference) != 0:
+		fmt.Println(occurrenceCounter(buffer), *fileName)
 	default:
 		fmt.Println(strings.Count(buffer.String(), "\n"), len(strings.Fields(buffer.String())), buffer.Len(), *fileName)
 	}
