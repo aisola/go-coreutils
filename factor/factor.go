@@ -66,7 +66,9 @@ func getNumber(currentNumber string) int {
 func getFactors(number int) []int {
 	factors := make([]int, 0)
 
-	// If the number is
+	// If the number is divisible by the index, the value of the index is a factor of the number.
+	// Therefore, append the index to the slice of factors, divide the number by the factor, and
+	// reset the index to 1
 	for index := 2; index < number; index++ {
 		if number%index == 0 {
 			factors = append(factors, index)
