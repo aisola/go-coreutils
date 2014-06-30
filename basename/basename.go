@@ -97,7 +97,7 @@ func argumentCheck() {
 	case flag.NArg() == 1: // If there is only one  argument
 		checkSuffix(getBaseName())
 	case flag.NArg() == 2 && suffixExists(): // If there is an argument and a suffix
-		fmt.Println(strings.TrimSuffix(getBaseName(), flag.Arg(len(flag.Args()) - 1)))
+		fmt.Println(strings.TrimSuffix(getBaseName(), flag.Arg(len(flag.Args())-1)))
 	case !*multiple: // If multiple is disabled but there is more than one argument
 		fmt.Println(getBaseName())
 	case *multiple: // If multiple is enabled and there is more than one argument
@@ -151,8 +151,8 @@ func checkZero(baseName string) {
 func multiFilePrinter() {
 	var arguments int
 	if suffixExists() {
-		*suffix = flag.Arg(len(flag.Args())-1)
-		arguments = len(flag.Args())-1
+		*suffix = flag.Arg(len(flag.Args()) - 1)
+		arguments = len(flag.Args()) - 1
 	} else {
 		arguments = len(flag.Args())
 	}

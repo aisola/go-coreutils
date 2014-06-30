@@ -163,7 +163,7 @@ func isComment(line string) bool {
 func slocCounter(buffer *bytes.Buffer) int {
 	lines := bufferToStringArray(buffer)
 	var count int
-	
+
 	for _, line := range lines {
 		if !isEmptyLine(line) && !isComment(line) {
 			count++

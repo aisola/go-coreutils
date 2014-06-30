@@ -95,7 +95,7 @@ func bufferGroups() *bytes.Buffer {
 		fmt.Println("Error: group file does not exist.")
 		os.Exit(0)
 	}
-	
+
 	io.Copy(buffer, cached)
 	return buffer
 }
@@ -214,7 +214,7 @@ func argumentLoop() {
 		sys := getAdditionalFileStat(fi)                 // Get lower level file statistics.
 		usr := lookupUserID(fmt.Sprintf("%d", sys.Uid))  // Get user name
 		grp := lookupGroupID(fmt.Sprintf("%d", sys.Gid)) // Get group name
-		defaultMode(fi, sys, usr, grp, index)                 // Send file information for printing.
+		defaultMode(fi, sys, usr, grp, index)            // Send file information for printing.
 	}
 }
 

@@ -225,7 +225,7 @@ func bufferGroups() *bytes.Buffer {
 		fmt.Println("Error: group file does not exist.")
 		os.Exit(0)
 	}
-	
+
 	io.Copy(buffer, cached)
 	return buffer
 }
@@ -297,7 +297,7 @@ func getFileSize(done chan bool) {
 // Obtains a list of user names
 func getUserList(done chan bool) {
 	userBuffer := bufferToStringArray(bufferUsers())
-	
+
 	for _, file := range fileList {
 		uid := lookupUserID(getUID(file), userBuffer)
 
@@ -309,10 +309,10 @@ func getUserList(done chan bool) {
 // Obtains a list of group names
 func getGroupList(done chan bool) {
 	groupBuffer := bufferToStringArray(bufferGroups())
-	
+
 	for _, file := range fileList {
 		gid := lookupGroupID(getGID(file), groupBuffer)
-		
+
 		fileGroupList = append(fileGroupList, gid)
 	}
 	done <- true
@@ -471,7 +471,7 @@ func indexCounter(currentIndex, column, lastRowCount, numOfRows *int) int {
  * to be printed, how wide the terminal is, the maximum number of columns, how many files are on the last
  * row, and how many rows are to be printed. The first portion of this function will grab all of these
  * statistics.
- * 
+ *
  * After gaining those aforementioned statistics, it is necessary to develop an algorithm for processing
  * all of this data in a manner that allows us to print each file correctly. The for printing loop contains
  * that algorithm. */
@@ -522,7 +522,7 @@ func printSwitch() {
 
 // NOTE: The main function
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU()+1)
+	runtime.GOMAXPROCS(runtime.NumCPU() + 1)
 	flag.Parse()
 	processFlags()
 
@@ -533,7 +533,7 @@ func main() {
 	lengthDone := make(chan bool)
 	oneLineCheck := make(chan bool)
 	maxCharLengthCheck := make(chan bool)
-	
+
 	// The goroutines used to grab all file statistics in parallel for a slight performance boost.
 	go getFileLengthList(lengthDone)
 	go getMaxCharacterLength(maxCharLengthCheck)
@@ -547,13 +547,13 @@ func main() {
 		userDone := make(chan bool)
 		groupDone := make(chan bool)
 		countDone := make(chan bool)
-		
+
 		go getModeTypeList(modeDone)
 		go getModDateList(modDateDone)
 		go getFileSize(sizeDone)
 		go getUserList(userDone)
 		go getGroupList(groupDone)
-		
+
 		<-userDone
 		<-groupDone
 		<-sizeDone
@@ -563,7 +563,7 @@ func main() {
 		<-countDone
 		fmt.Println(maxIDLength)
 	}
-	
+
 	// Synchronize goroutines with main
 	<-lengthDone
 	<-maxCharLengthCheck
