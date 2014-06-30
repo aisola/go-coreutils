@@ -26,8 +26,8 @@ du
 *echo
 env
 expand
-expr
-factor
+*expr
+*factor
 *false
 fmt
 fold
@@ -92,7 +92,7 @@ tty
 tsort
 unexpand
 uniq
-uname
+*uname
 unlink
 *uptime
 users
