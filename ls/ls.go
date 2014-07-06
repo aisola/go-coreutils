@@ -154,19 +154,15 @@ func getPath() string {
 		} else {
 			return flag.Arg(0) + "/"
 		}
-
 	}
 }
 
 // Checks if the file can be shown
-func isHidden(file string) bool {
-	switch {
-	case *showHidden: // If the hidden flag is enabled
+func fileIsNotHidden(file string) bool {
+	if strings.HasPrefix(file, ".") {
 		return false
-	case strings.HasPrefix(file, "."): // If it is disabled and the file is hidden
+	} else {
 		return true
-	default: // If it is disabled and the file is not hidden
-		return false
 	}
 }
 
@@ -185,7 +181,7 @@ func scanDirectory() {
 			fileList = directory
 		} else {
 			for _, file := range directory {
-				if isHidden(file.Name()) == false {
+				if fileIsNotHidden(file.Name()) {
 					fileList = append(fileList, file)
 				}
 			}
@@ -284,7 +280,6 @@ func dateFormatCheck(fileModTime time.Time) string {
 // Opens the passwd file and returns a buffer of it's contents.
 func bufferUsers() *bytes.Buffer {
 	buffer := bytes.NewBuffer(nil)
-
 	cached, err := os.Open("/etc/passwd")
 	if err != nil {
 		fmt.Println("Error: passwd file does not exist.")
@@ -297,13 +292,11 @@ func bufferUsers() *bytes.Buffer {
 // Opens the group file and returns a buffer of it's contents.
 func bufferGroups() *bytes.Buffer {
 	buffer := bytes.NewBuffer(nil)
-
 	cached, err := os.Open("/etc/group")
 	if err != nil {
 		fmt.Println("Error: group file does not exist.")
 		os.Exit(0)
 	}
-
 	io.Copy(buffer, cached)
 	return buffer
 }
@@ -654,11 +647,12 @@ func printTopToBottomFile(currentColumn, maxColumns *int, file string) {
 
 // Reset the terminal at the end and add an extra newline if needed.
 func resetTerminal(lastRowCount *int) {
-	if *lastRowCount%2 != 0 {
-		fmt.Println(RESET)
-	} else {
+	if *lastRowCount == 0 {
 		fmt.Print(RESET)
+	} else {
+		fmt.Println(RESET)
 	}
+	
 }
 
 // Obtains statistics on the files to be printed, checks if printing order should be reversed,
@@ -684,7 +678,6 @@ func printTopToBottom(colorizedList []string) {
 			printTopToBottomFile(&currentColumn, &maxColumns, colorizedList[index])
 		}
 	}
-
 	resetTerminal(&lastRowCount)
 }
 
