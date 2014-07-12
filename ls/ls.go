@@ -6,7 +6,6 @@
 //
 /* TODO:
  * Add (t), sort by modification time, newest first.
- * Add (h, human-readable), with -l, print sizes in human readable format.
  * Add (s, size), print the allocated size of each file, in blocks.
  * Add (S), sort by file size.
  * Add (q, quote-name), enclose entry names in double quotes.
@@ -49,6 +48,9 @@ const ( // Constant variables used throughout the program.
         
         -d, -directory
               list only directories and not their contents
+        
+        -h, -human-readable
+              with -l, print sizes in human readable format
 
         -l    use a long listing format
         
@@ -76,6 +78,8 @@ var ( // Default flags and variables.
 	showHidden      = flag.Bool("a", false, "list hidden files and directories")
 	dirOnly         = flag.Bool("d", false, "list only directories and not their contents")
 	dirOnlyLong     = flag.Bool("directory", false, "list only directories and not their contents")
+	human           = flag.Bool("h", false, "print sizes in human-readable format")
+	humanLong       = flag.Bool("human-readable", false, "print sizes in human-readable format")
 	longMode        = flag.Bool("l", false, "use a long listing format")
 	numericIDs      = flag.Bool("n", false, "list numeric uid/gid's instead of names.")
 	numericIDsLong  = flag.Bool("numeric-uid-gid", false, "list numeric uid/gid's instead of names.")
@@ -99,7 +103,7 @@ var ( // Default flags and variables.
 	fileUserList    = make([]string, 0)       // A list of user values
 	fileGroupList   = make([]string, 0)       // A list of group values
 	fileModDateList = make([]string, 0)       // A list of file modication times.
-	fileSizeList    = make([]int64, 0)        // A list of file sizes.
+	fileSizeList    = make([]string, 0)       // A list of file sizes.
 )
 
 // Check initial state of flags.
@@ -112,6 +116,9 @@ func processFlags() {
 	if *version {
 		fmt.Println(version_text)
 		os.Exit(0)
+	}
+	if *humanLong {
+		*human = true
 	}
 	if *reversedLong {
 		*reversed = true
@@ -289,10 +296,24 @@ func lookupGroupID(gid string, groupStringArray []string) string {
 	return gid
 }
 
+// Returns the file size in either human or non-human-readable format
+func getSizeString(size int64) string {
+	if *human {
+		if size > 1073741824 {
+			return fmt.Sprintf("%.1f%s", float32(size)/1073741824, "G")
+		} else if size > 1048576 {
+			return fmt.Sprintf("%.1f%s", float32(size)/1048576, "M")
+		} else if size > 1024 {
+			return fmt.Sprintf("%.1f%s", float32(size)/1024, "K")
+		}
+	}
+	return fmt.Sprintf("%d", size)
+}
+
 // Obtains a list of file sizes.
 func getFileSize(done chan bool) {
 	for _, file := range fileList {
-		fileSizeList = append(fileSizeList, file.Size())
+		fileSizeList = append(fileSizeList, getSizeString(file.Size()))
 	}
 	done <- true
 }
@@ -354,18 +375,13 @@ func getMaxCharacterLength(done chan bool) {
 	done <- true
 }
 
-// Determines the maximum size name length for printing with long mode.
-func countSizeLength(fileSize int64) {
-	length := len(fmt.Sprintf("%d", fileSize))
-	if length > maxSizeLength {
-		maxSizeLength = length
-	}
-}
-
 // Determines the max character length of file size and user/group names/ids.
 func countMaxSizeLength(done chan bool) {
-	for _, file := range fileList {
-		countSizeLength(file.Size())
+	for _, size := range fileSizeList {
+		length := len(size)
+		if length > maxSizeLength {
+			maxSizeLength = length
+		}
 	}
 	done <- true
 }
@@ -579,7 +595,7 @@ func colorizer(file os.FileInfo) string {
 func getLongModeLayout() string {
 	ownershipLayout := fmt.Sprintf("%d", maxIDLength)
 	sizeLayout := fmt.Sprintf("%d", maxSizeLength)
-	return "%11s %-" + ownershipLayout + "s %-" + ownershipLayout + "s %" + sizeLayout + "d %12s %s\n"
+	return "%11s %-" + ownershipLayout + "s %-" + ownershipLayout + "s %" + sizeLayout + "s %12s %s\n"
 }
 
 // If the file is a symbolic link, resolve it and print the mode type of that location.
