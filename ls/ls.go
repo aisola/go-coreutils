@@ -88,18 +88,18 @@ var ( // Default flags and variables.
 	maxSizeLength   = 0                       // Statistics for the longest file size length.
 	totalCharLength = 0                       // Statistics for the total number of characters.
 	maxCharLength   = 0                       // Statistics for maximum file name length.
-	maxColumns      = 0
-	numOfRows       = 0
-	numOfFiles      = 0
-	lastRowCount    = 0
-	printOrder      = make([]int, 0)
-	fileList        = make([]os.FileInfo, 0) // A list of all files being processed
-	fileLengthList  = make([]int, 0)         // A list of file character lengths
-	fileModeList    = make([]string, 0)      // A list of file mode strings
-	fileUserList    = make([]string, 0)      // A list of user values
-	fileGroupList   = make([]string, 0)      // A list of group values
-	fileModDateList = make([]string, 0)      // A list of file modication times.
-	fileSizeList    = make([]int64, 0)       // A list of file sizes.
+	maxColumns      = 0                       // Statistics for the maximum number of columns
+	numOfRows       = 0                       // Statistics for the maximum number of rows.
+	numOfFiles      = 0                       // Statistics for the number of files.
+	lastRowCount    = 0                       // The number of files on the last row.
+	printOrder      = make([]int, 0)          // The printing order.
+	fileList        = make([]os.FileInfo, 0)  // A list of all files being processed
+	fileLengthList  = make([]int, 0)          // A list of file character lengths
+	fileModeList    = make([]string, 0)       // A list of file mode strings
+	fileUserList    = make([]string, 0)       // A list of user values
+	fileGroupList   = make([]string, 0)       // A list of group values
+	fileModDateList = make([]string, 0)       // A list of file modication times.
+	fileSizeList    = make([]int64, 0)        // A list of file sizes.
 )
 
 // Check initial state of flags.
@@ -386,17 +386,30 @@ func countMaxIDLength(done chan bool) {
 	done <- true
 }
 
-// Determines if we can print on one line.
-func printOneLineCheck(done chan bool) {
+// Counts char length up to maximum terminal width
+func countTotalCharLength() {
 	for _, file := range fileList {
 		if totalCharLength <= terminalWidth {
 			totalCharLength += len(file.Name()) + 2 // The additional 2 is for spacing.
 		} else {
-			printOneLine = false
-			done <- true
+			break
 		}
 	}
-	printOneLine = true
+}
+
+// Sets printOneLine to either true or false.
+func setPrintOneLine() {
+	if totalCharLength <= terminalWidth {
+		printOneLine = true
+	} else {
+		printOneLine = false
+	}
+}
+
+// Determines if we can print on one line.
+func printOneLineCheck(done chan bool) {
+	countTotalCharLength()
+	setPrintOneLine()
 	done <- true
 }
 
@@ -435,7 +448,6 @@ func indexCounter(currentIndex, column *int) int {
 // Returns the printing order based on the number of files and maximum column width.
 func getTopToBottomOrder() {
 	var currentRow, currentIndex int = 1, 0
-
 	// TODO: Parallelize this process by creating as many goroutine workers
 	// as columns and appending each completed job slice in order.
 	for index := 0; index < numOfFiles; {
@@ -596,7 +608,6 @@ func printLongModeFile(file os.FileInfo, index *int) {
 func longModePrinter() {
 	// Print number of files in the directory
 	fmt.Println("total:", numOfFiles)
-
 	if *reversed {
 		for index := numOfFiles - 1; index >= 0; index-- {
 			file := fileList[index]
@@ -661,7 +672,6 @@ func resetTerminal(lastRowCount *int) {
 // and finally prints files based on the printing order.
 func printTopToBottom(colorizedList []string) {
 	var currentColumn int = 1
-
 	if *reversed {
 		// Print all but the last row in descending order
 		for index := ((numOfRows - 1) * maxColumns) - 1; index >= 0; index-- {
@@ -679,7 +689,6 @@ func printTopToBottom(colorizedList []string) {
 			printTopToBottomFile(&currentColumn, colorizedList[index])
 		}
 	}
-
 	resetTerminal(&lastRowCount)
 }
 
