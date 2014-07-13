@@ -4,6 +4,12 @@
 //
 // Written By: Michael Murphy, Abram C. Isola
 //
+/* TODO:
+ * Add (t), sort by modification time, newest first.
+ * Add (s, size), print the allocated size of each file, in blocks.
+ * Add (S), sort by file size.
+ * Add (q, quote-name), enclose entry names in double quotes.
+ */
 package main
 
 import "bytes"
@@ -37,11 +43,25 @@ const ( // Constant variables used throughout the program.
 
         --help        display this help and exit
         --version     output version information and exit
+
+        -a    include hidden files and directories
         
-        -a  include hidden files and directories
-        -l  use a long listing format
-        -1  list in a single column
-    `
+        -d, -directory
+              list only directories and not their contents
+        
+        -h, -human-readable
+              with -l, print sizes in human readable format
+
+        -l    use a long listing format
+        
+        -n, -numeric-uid-gid
+              list numeric uid/gid's instead of names
+
+        -r, -reverse
+              reverse order while sorting
+              
+        -1    list in a single column
+`
 	version_text = `
     ls (go-coreutils) 0.1
 
@@ -56,25 +76,39 @@ var ( // Default flags and variables.
 	help            = flag.Bool("help", false, "display help information")
 	version         = flag.Bool("version", false, "display version information")
 	showHidden      = flag.Bool("a", false, "list hidden files and directories")
-	singleColumn    = flag.Bool("1", false, "list files by one column")
+	dirOnly         = flag.Bool("d", false, "list only directories and not their contents")
+	dirOnlyLong     = flag.Bool("directory", false, "list only directories and not their contents")
+	human           = flag.Bool("h", false, "print sizes in human-readable format")
+	humanLong       = flag.Bool("human-readable", false, "print sizes in human-readable format")
 	longMode        = flag.Bool("l", false, "use a long listing format")
-	printOneLine    = true                    // Sets whether or not to print on one row.
+	numericIDs      = flag.Bool("n", false, "list numeric uid/gid's instead of names.")
+	numericIDsLong  = flag.Bool("numeric-uid-gid", false, "list numeric uid/gid's instead of names.")
+	reversed        = flag.Bool("r", false, "reverse order while sorting")
+	reversedLong    = flag.Bool("reverse", false, "reverse order while sorting")
+	singleColumn    = flag.Bool("1", false, "list files by one column")
+	printOneLine    = true                    // list in a single columnlist in a single columnets whether or not to print on one row.
 	terminalWidth   = int(getTerminalWidth()) // Grabs information on the current terminal width.
 	maxIDLength     = 0                       // Statistics for the longest id name length.
 	maxSizeLength   = 0                       // Statistics for the longest file size length.
 	totalCharLength = 0                       // Statistics for the total number of characters.
 	maxCharLength   = 0                       // Statistics for maximum file name length.
+	maxColumns      = 0                       // Statistics for the maximum number of columns
+	numOfRows       = 0                       // Statistics for the maximum number of rows.
+	numOfFiles      = 0                       // Statistics for the number of files.
+	lastRowCount    = 0                       // The number of files on the last row.
+	printOrder      = make([]int, 0)          // The printing order.
 	fileList        = make([]os.FileInfo, 0)  // A list of all files being processed
 	fileLengthList  = make([]int, 0)          // A list of file character lengths
 	fileModeList    = make([]string, 0)       // A list of file mode strings
 	fileUserList    = make([]string, 0)       // A list of user values
 	fileGroupList   = make([]string, 0)       // A list of group values
 	fileModDateList = make([]string, 0)       // A list of file modication times.
-	fileSizeList    = make([]int64, 0)        // A list of file sizes.
+	fileSizeList    = make([]string, 0)       // A list of file sizes.
 )
 
 // Check initial state of flags.
 func processFlags() {
+	flag.Parse()
 	if *help {
 		fmt.Println(help_text)
 		os.Exit(0)
@@ -82,6 +116,15 @@ func processFlags() {
 	if *version {
 		fmt.Println(version_text)
 		os.Exit(0)
+	}
+	if *humanLong {
+		*human = true
+	}
+	if *reversedLong {
+		*reversed = true
+	}
+	if *numericIDsLong {
+		*numericIDs = true
 	}
 }
 
@@ -123,40 +166,396 @@ func getPath() string {
 		} else {
 			return flag.Arg(0) + "/"
 		}
-
 	}
 }
 
 // Checks if the file can be shown
-func isHidden(file string) bool {
-	switch {
-	case *showHidden: // If the hidden flag is enabled
+func fileIsNotHidden(file string) bool {
+	if strings.HasPrefix(file, ".") {
 		return false
-	case strings.HasPrefix(file, "."): // If it is disabled and the file is hidden
+	} else {
 		return true
-	default: // If it is disabled and the file is not hidden
-		return false
+	}
+}
+
+// Loop through each file in the directory and check whether or not it is hidden.
+// If the file is hidden, it shall not be displayed.
+func checkForHiddenFiles(directory *[]os.FileInfo) {
+	for _, file := range *directory {
+		if fileIsNotHidden(file.Name()) {
+			fileList = append(fileList, file)
+		}
 	}
 }
 
 // Scans the directory and returns a list of the contents. If the directory
 // does not exist, an error is printed and the program exits.
 func scanDirectory() {
-	directory, err := ioutil.ReadDir(getPath())
-	errorChecker(&err, "ls: "+getPath()+" - No such file or directory.\n")
-
-	if *showHidden {
-		fileList = directory
+	if *dirOnly {
+		directory, err := os.Stat(getPath())
+		errorChecker(&err, "ls: "+getPath()+" - No such file or directory.\n")
+		fileList = append(fileList, directory)
 	} else {
-		for _, file := range directory {
-			if isHidden(file.Name()) == false {
-				fileList = append(fileList, file)
-			}
+		directory, err := ioutil.ReadDir(getPath())
+		errorChecker(&err, "ls: "+getPath()+" - No such file or directory.\n")
+		if *showHidden {
+			fileList = directory
+		} else {
+			checkForHiddenFiles(&directory)
 		}
 	}
 }
 
-// Obtain file statistics
+// Opens a file and returns it
+func openFile(file string) *os.File {
+	cached, err := os.Open(file)
+	if err != nil {
+		fmt.Printf("Error: '%s' does not exist.\n", file)
+		os.Exit(0)
+	}
+	return cached
+}
+
+// Opens the passwd file and returns a buffer of it's contents.
+func bufferUsers() *bytes.Buffer {
+	buffer := bytes.NewBuffer(nil)
+	file := openFile("/etc/passwd")
+	io.Copy(buffer, file)
+	return buffer
+}
+
+// Opens the group file and returns a buffer of it's contents.
+func bufferGroups() *bytes.Buffer {
+	buffer := bytes.NewBuffer(nil)
+	file := openFile("/etc/group")
+	io.Copy(buffer, file)
+	return buffer
+}
+
+// Converts a bytes buffer into a newline-separated string array.
+func bufferToStringArray(buffer *bytes.Buffer) []string {
+	return strings.Split(buffer.String(), "\n")
+}
+
+// Returns a colon separated string array for use in parsing /etc/group and /etc/user
+func parseLine(line string) []string {
+	return strings.Split(line, ":")
+}
+
+// Returns user id
+func getUID(file os.FileInfo) string {
+	return fmt.Sprintf("%d", file.Sys().(*syscall.Stat_t).Uid)
+}
+
+// Returns group id
+func getGID(file os.FileInfo) string {
+	return fmt.Sprintf("%d", file.Sys().(*syscall.Stat_t).Gid)
+}
+
+// Checks if the date of the file is from a prior year, and if so print the year, else print
+// only the hour and minute.
+func dateFormatCheck(fileModTime time.Time) string {
+	if fileModTime.Year() != time.Now().Year() {
+		return fileModTime.Format(DATE_YEAR_FORMAT)
+	} else {
+		return fileModTime.Format(DATE_FORMAT)
+	}
+}
+
+// Obtains a list of formatted file modification dates.
+func getModDateList(done chan bool) {
+	for _, file := range fileList {
+		fileModDateList = append(fileModDateList, dateFormatCheck(file.ModTime()))
+	}
+	done <- true
+}
+
+// Returns the username associated to a user ID
+func lookupUserID(uid string, userStringArray []string) string {
+	for _, line := range userStringArray {
+		values := parseLine(line)
+		if len(values) > 2 {
+			if values[2] == uid {
+				return values[0]
+			}
+		}
+	}
+	return uid
+}
+
+// Returns the groupname associated to a group ID
+func lookupGroupID(gid string, groupStringArray []string) string {
+	for _, line := range groupStringArray {
+		values := parseLine(line)
+		if len(values) > 2 {
+			if values[2] == gid {
+				return values[0]
+			}
+		}
+	}
+	return gid
+}
+
+// Returns the file size in either human or non-human-readable format
+func getSizeString(size int64) string {
+	if *human {
+		if size > 1073741824 {
+			return fmt.Sprintf("%.1f%s", float32(size)/1073741824, "G")
+		} else if size > 1048576 {
+			return fmt.Sprintf("%.1f%s", float32(size)/1048576, "M")
+		} else if size > 1024 {
+			return fmt.Sprintf("%.1f%s", float32(size)/1024, "K")
+		}
+	}
+	return fmt.Sprintf("%d", size)
+}
+
+// Obtains a list of file sizes.
+func getFileSize(done chan bool) {
+	for _, file := range fileList {
+		fileSizeList = append(fileSizeList, getSizeString(file.Size()))
+	}
+	done <- true
+}
+
+// Obtains a list of user names
+func getUserList(done chan bool) {
+	userBuffer := bufferToStringArray(bufferUsers())
+	for _, file := range fileList {
+		if *numericIDs {
+			fileUserList = append(fileUserList, getUID(file))
+		} else {
+			fileUserList = append(fileUserList, lookupUserID(getUID(file), userBuffer))
+		}
+	}
+	done <- true
+}
+
+// Obtains a list of group names
+func getGroupList(done chan bool) {
+	groupBuffer := bufferToStringArray(bufferGroups())
+	for _, file := range fileList {
+		if *numericIDs {
+			fileGroupList = append(fileGroupList, getGID(file))
+		} else {
+			fileGroupList = append(fileGroupList, lookupGroupID(getGID(file), groupBuffer))
+		}
+	}
+	done <- true
+}
+
+// Obtains a list of file character lengths.
+func getFileLengthList(done chan bool) {
+	for _, file := range fileList {
+		fileLengthList = append(fileLengthList, len(file.Name()))
+	}
+	done <- true
+}
+
+// Obtains the mode type of the file in string format.
+func getModeType(file os.FileInfo) string {
+	return file.Mode().String()
+}
+
+// Obtains a list of mode types in string format.
+func getModeTypeList(done chan bool) {
+	for _, file := range fileList {
+		fileModeList = append(fileModeList, file.Mode().String())
+	}
+	done <- true
+}
+
+// Determines the character length of the longest file name.
+func getMaxCharacterLength(done chan bool) {
+	for _, file := range fileList {
+		if len(file.Name()) > maxCharLength {
+			maxCharLength = len(file.Name())
+		}
+	}
+	done <- true
+}
+
+// Determines the max character length of file size and user/group names/ids.
+func countMaxSizeLength(done chan bool) {
+	for _, size := range fileSizeList {
+		length := len(size)
+		if length > maxSizeLength {
+			maxSizeLength = length
+		}
+	}
+	done <- true
+}
+
+// If the length of the ID is greater than the max ID length, length becomes the new max ID length.
+func checkIDLength(length int) {
+	if length > maxIDLength {
+		maxIDLength = length
+	}
+}
+
+// Determines the max ID length.
+func countMaxIDLength(done chan bool) {
+	for index, _ := range fileList {
+		checkIDLength(len(fileUserList[index]))
+		checkIDLength(len(fileGroupList[index]))
+	}
+	done <- true
+}
+
+// Counts char length up to maximum terminal width
+func countTotalCharLength() {
+	for _, file := range fileList {
+		if totalCharLength <= terminalWidth {
+			totalCharLength += len(file.Name()) + 2 // The additional 2 is for spacing.
+		} else {
+			break
+		}
+	}
+}
+
+// Sets printOneLine to either true or false.
+func setPrintOneLine() {
+	if totalCharLength <= terminalWidth {
+		printOneLine = true
+	} else {
+		printOneLine = false
+	}
+}
+
+// Determines if we can print on one line.
+func printOneLineCheck(done chan bool) {
+	countTotalCharLength()
+	setPrintOneLine()
+	done <- true
+}
+
+// Returns the maximum number of columns to print
+func getMaxColumns(done chan int) {
+	done <- terminalWidth / (maxCharLength + SPACING)
+}
+
+// Returns the number of files to print
+func getNumOfFiles(done chan int) {
+	done <- len(fileList)
+}
+
+// Returns the number of files on the last row
+func getLastRowCount(done chan int) {
+	done <- numOfFiles % maxColumns
+}
+
+// Returns the number of rows to print
+func countRows(done chan int) {
+	done <- numOfFiles/maxColumns + 1
+}
+
+// Increases index count in printTopToBottom based on current position.
+// The index must take into account the fact that the last row needs files to print as well.
+// After we are certain that the last row is happy, we can then start increasing index count by
+// the number of rows minus one.
+func indexCounter(currentIndex, column *int) int {
+	if *column >= lastRowCount+1 {
+		return *currentIndex + numOfRows - 1
+	} else {
+		return *currentIndex + numOfRows
+	}
+}
+
+// Returns the printing order based on the number of files and maximum column width.
+func getTopToBottomOrder() {
+	var currentRow, currentIndex int = 1, 0
+	// TODO: Parallelize this process by creating as many goroutine workers
+	// as columns and appending each completed job slice in order.
+	for index := 0; index < numOfFiles; {
+		if currentRow < numOfRows {
+			for column := 1; column < maxColumns; column++ {
+				printOrder = append(printOrder, currentIndex)
+				currentIndex = indexCounter(&currentIndex, &column)
+			}
+			printOrder = append(printOrder, currentIndex)
+			currentRow++
+			currentIndex = currentRow - 1
+			index += maxColumns
+		} else {
+			for column := 1; column <= lastRowCount; column++ {
+				printOrder = append(printOrder, currentIndex)
+				currentIndex += numOfRows
+			}
+			index = numOfFiles
+		}
+	}
+}
+
+// Obtain lists of file information
+func getFileStats() {
+	// Channels for the goroutines to check when they finish.
+	lengthDone := make(chan bool)
+	oneLineCheck := make(chan bool)
+	maxCharLengthCheck := make(chan bool)
+
+	// The goroutines used to grab all file statistics in parallel for a slight performance boost.
+	go getFileLengthList(lengthDone)
+	go getMaxCharacterLength(maxCharLengthCheck)
+	go printOneLineCheck(oneLineCheck)
+
+	// If longMode is enabled
+	if *longMode {
+		modeDone := make(chan bool)
+		modDateDone := make(chan bool)
+		sizeDone := make(chan bool)
+		userDone := make(chan bool)
+		groupDone := make(chan bool)
+		idDone := make(chan bool)
+		countDone := make(chan bool)
+
+		go getModeTypeList(modeDone)
+		go getModDateList(modDateDone)
+		go getFileSize(sizeDone)
+		go getUserList(userDone)
+		go getGroupList(groupDone)
+
+		<-userDone
+		<-groupDone
+		go countMaxIDLength(idDone)
+		<-sizeDone
+		go countMaxSizeLength(countDone)
+		<-modeDone
+		<-modDateDone
+		<-countDone
+		<-idDone
+	} else {
+
+	}
+
+	// Synchronize goroutines with main
+	<-lengthDone
+	<-maxCharLengthCheck
+	<-oneLineCheck
+
+	// If longmode is not enabled, get these statistics
+	if !*longMode {
+		maxColumnsChan := make(chan int)
+		numOfFilesChan := make(chan int)
+		lastRowCountChan := make(chan int)
+		numOfRowsChan := make(chan int)
+
+		go getMaxColumns(maxColumnsChan)
+		go getNumOfFiles(numOfFilesChan)
+
+		maxColumns = <-maxColumnsChan
+		numOfFiles = <-numOfFilesChan
+
+		go getLastRowCount(lastRowCountChan)
+		go countRows(numOfRowsChan)
+
+		lastRowCount = <-lastRowCountChan
+		numOfRows = <-numOfRowsChan
+
+		getTopToBottomOrder()
+	}
+}
+
+// Open a symlink
 func openSymlink(file string) os.FileInfo {
 	var fi os.FileInfo
 	if !strings.HasPrefix(file, "/") {
@@ -192,151 +591,127 @@ func colorizer(file os.FileInfo) string {
 	}
 }
 
-//NOTE: Below are functions for obtaining statistics
-// Checks if the date of the file is from a prior year, and if so print the year, else print
-// only the hour and minute.
-func dateFormatCheck(fileModTime time.Time) string {
-	if fileModTime.Year() != time.Now().Year() {
-		return fileModTime.Format(DATE_YEAR_FORMAT)
+// Returns the printing layout for long mode.
+func getLongModeLayout() string {
+	ownershipLayout := fmt.Sprintf("%d", maxIDLength)
+	sizeLayout := fmt.Sprintf("%d", maxSizeLength)
+	return "%11s %-" + ownershipLayout + "s %-" + ownershipLayout + "s %" + sizeLayout + "s %12s %s\n"
+}
+
+// If the file is a symbolic link, resolve it and print the mode type of that location.
+func checkIfSymlink(file os.FileInfo) string {
+	var fileName string
+
+	if file.Mode()&SYMLINK != 0 {
+		symPath := readLink(file.Name())
+		fileName = colorizer(file) + RESET + " -> " + colorizer(openSymlink(symPath))
 	} else {
-		return fileModTime.Format(DATE_FORMAT)
-	}
-}
-
-// Opens the passwd file and returns a buffer of it's contents.
-func bufferUsers() *bytes.Buffer {
-	buffer := bytes.NewBuffer(nil)
-
-	cached, err := os.Open("/etc/passwd")
-	if err != nil {
-		fmt.Println("Error: passwd file does not exist.")
-		os.Exit(0)
-	}
-	io.Copy(buffer, cached)
-	return buffer
-}
-
-// Opens the group file and returns a buffer of it's contents.
-func bufferGroups() *bytes.Buffer {
-	buffer := bytes.NewBuffer(nil)
-
-	cached, err := os.Open("/etc/group")
-	if err != nil {
-		fmt.Println("Error: group file does not exist.")
-		os.Exit(0)
+		fileName = colorizer(file)
 	}
 
-	io.Copy(buffer, cached)
-	return buffer
+	return fileName
 }
 
-// Converts a bytes buffer into a newline-separated string array.
-func bufferToStringArray(buffer *bytes.Buffer) []string {
-	return strings.Split(buffer.String(), "\n")
+// Prints a single file in long mode format.
+func printLongModeFile(file os.FileInfo, index *int) {
+	printingLayout := getLongModeLayout()
+	fileName := checkIfSymlink(file)
+	fmt.Printf(printingLayout, fileModeList[*index], fileUserList[*index],
+		fileGroupList[*index], fileSizeList[*index], fileModDateList[*index], fileName+RESET)
 }
 
-// Returns a colon separated string array for use in parsing /etc/group and /etc/user
-func parseLine(line string) []string {
-	return strings.Split(line, ":")
-}
-
-// Returns user id
-func getUID(file os.FileInfo) string {
-	return fmt.Sprintf("%d", file.Sys().(*syscall.Stat_t).Uid)
-}
-
-// Returns group id
-func getGID(file os.FileInfo) string {
-	return fmt.Sprintf("%d", file.Sys().(*syscall.Stat_t).Gid)
-}
-
-// Obtains a list of formatted file modification dates.
-func getModDateList(done chan bool) {
-	for _, file := range fileList {
-		fileModDateList = append(fileModDateList, dateFormatCheck(file.ModTime()))
-	}
-	done <- true
-}
-
-// Returns the username associated to a user ID
-func lookupUserID(uid string, userStringArray []string) string {
-	for _, line := range userStringArray {
-		values := parseLine(line)
-		if len(values) > 2 {
-			if values[2] == uid {
-				return values[0]
-			}
+// Prints files in long mode
+func longModePrinter() {
+	// Print number of files in the directory
+	fmt.Println("total:", numOfFiles)
+	if *reversed {
+		for index := numOfFiles - 1; index >= 0; index-- {
+			file := fileList[index]
+			printLongModeFile(file, &index)
 		}
-
-	}
-	return uid
-}
-
-// Returns the groupname associated to a group ID
-func lookupGroupID(gid string, groupStringArray []string) string {
-	for _, line := range groupStringArray {
-		values := parseLine(line)
-		if len(values) > 2 {
-			if values[2] == gid {
-				return values[0]
-			}
+	} else {
+		for index, file := range fileList {
+			printLongModeFile(file, &index)
 		}
-
 	}
-	return gid
 }
 
-// Obtains a list of file sizes.
-func getFileSize(done chan bool) {
-	for _, file := range fileList {
-		fileSizeList = append(fileSizeList, file.Size())
+// Prints all files in one line
+func oneLinePrinter() {
+	if *reversed {
+		for index := numOfFiles - 1; index >= 0; index-- {
+			fmt.Print(colorizer(fileList[index]), "  ")
+		}
+	} else {
+		for _, file := range fileList {
+			fmt.Print(colorizer(file), "  ")
+		}
 	}
-	done <- true
+	fmt.Println(RESET)
 }
 
-// Obtains a list of user names
-func getUserList(done chan bool) {
-	userBuffer := bufferToStringArray(bufferUsers())
-
-	for _, file := range fileList {
-		uid := lookupUserID(getUID(file), userBuffer)
-
-		fileUserList = append(fileUserList, uid)
+// Prints all files in one column
+func singleColumnPrinter() {
+	if *reversed {
+		for index := numOfFiles - 1; index >= 0; index-- {
+			fmt.Println(colorizer(fileList[index]))
+		}
+	} else {
+		for _, file := range fileList {
+			fmt.Println(colorizer(file))
+		}
 	}
-	done <- true
+	fmt.Print(RESET)
 }
 
-// Obtains a list of group names
-func getGroupList(done chan bool) {
-	groupBuffer := bufferToStringArray(bufferGroups())
-
-	for _, file := range fileList {
-		gid := lookupGroupID(getGID(file), groupBuffer)
-
-		fileGroupList = append(fileGroupList, gid)
+// Prints a file on the screen and determines when it is time to print a newline.
+func printTopToBottomFile(currentColumn *int, file string) {
+	if *currentColumn == maxColumns {
+		fmt.Println(file)
+		*currentColumn = 0
+	} else {
+		fmt.Print(file)
 	}
-	done <- true
+	*currentColumn++
 }
 
-// Obtains a list of file character lengths.
-func getFileLengthList(done chan bool) {
-	for _, file := range fileList {
-		fileLengthList = append(fileLengthList, len(file.Name()))
+// Reset the terminal at the end and add an extra newline if needed.
+func resetTerminal(lastRowCount *int) {
+	if *lastRowCount == 0 {
+		fmt.Print(RESET)
+	} else {
+		fmt.Println(RESET)
 	}
-	done <- true
 }
 
-// Obtains the mode type of the file in string format.
-func getModeType(file os.FileInfo) string {
-	return file.Mode().String()
+// Obtains statistics on the files to be printed, checks if printing order should be reversed,
+// and finally prints files based on the printing order.
+func printTopToBottom(colorizedList []string) {
+	var currentColumn int = 1
+	if *reversed {
+		// Print all but the last row in descending order
+		for index := ((numOfRows - 1) * maxColumns) - 1; index >= 0; index-- {
+			printTopToBottomFile(&currentColumn, colorizedList[printOrder[index]])
+		}
+		// Print the final row
+		index := len(printOrder) - 1
+		for count := 0; count < lastRowCount; count++ {
+			fmt.Print(colorizedList[printOrder[index]])
+			index--
+		}
+	} else {
+		// Print files from top to bottom in ascending order
+		for _, index := range printOrder {
+			printTopToBottomFile(&currentColumn, colorizedList[index])
+		}
+	}
+	resetTerminal(&lastRowCount)
 }
 
-// Obtains a list of mode types in string format.
-func getModeTypeList(done chan bool) {
-	for _, file := range fileList {
-		fileModeList = append(fileModeList, file.Mode().String())
-	}
-	done <- true
+// The spacer function will add spaces to the end of each file name so that they line up
+// correctly when printing in the printTopToBottom function.
+func spacer(name string, charLength int) string {
+	return string(name + strings.Repeat(" ", maxCharLength-charLength+SPACING))
 }
 
 // Obtains a list of colorized and spaced names for printTopToBottom.
@@ -348,164 +723,7 @@ func getColorizedList() []string {
 	return colorizedList
 }
 
-// Determines the character length of the longest file name.
-func getMaxCharacterLength(done chan bool) {
-	for _, file := range fileList {
-		if len(file.Name()) > maxCharLength {
-			maxCharLength = len(file.Name())
-		}
-	}
-	done <- true
-}
-
-// Determines the max character length of file size and user/group names/ids.
-func countMaxSizeLength(done chan bool) {
-	for index, file := range fileList {
-		countSizeLength(file.Size())
-		countIDLength(fileUserList[index], fileGroupList[index])
-	}
-	done <- true
-}
-
-// Determines the maximum id name length for printing with long mode.
-func countIDLength(uid, gid string) {
-	if len(uid) > maxIDLength {
-		maxIDLength = len(uid)
-	}
-	if len(gid) > maxIDLength {
-		maxIDLength = len(gid)
-	}
-}
-
-// Determines the maximum size name length for printing with long mode.
-func countSizeLength(fileSize int64) {
-	length := len(fmt.Sprintf("%d", fileSize))
-	if length > maxSizeLength {
-		maxSizeLength = length
-	}
-}
-
-// Determines if we can print on one line.
-func printOneLineCheck(done chan bool) {
-	for _, file := range fileList {
-		if totalCharLength <= terminalWidth {
-			totalCharLength += len(file.Name()) + 2 // The additional 2 is for spacing.
-		} else {
-			printOneLine = false
-			done <- true
-		}
-	}
-	printOneLine = true
-	done <- true
-}
-
-// NOTE: The printing-related functions are below.
-func longModePrinter() {
-	// Print number of files in the directory
-	fmt.Println("total:", len(fileList))
-
-	ownershipLayout := fmt.Sprintf("%d", maxIDLength)
-	sizeLayout := fmt.Sprintf("%d", maxSizeLength)
-	printingLayout := "%11s %-" + ownershipLayout + "s %-" + ownershipLayout + "s %" + sizeLayout + "d %12s %s\n"
-	var fileName string
-	for index, file := range fileList {
-		if file.Mode()&SYMLINK != 0 {
-			symPath := readLink(file.Name())
-			fileName = colorizer(file) + RESET + " -> " + colorizer(openSymlink(symPath))
-		} else {
-			fileName = colorizer(file)
-		}
-
-		fmt.Printf(printingLayout, fileModeList[index], fileUserList[index],
-			fileGroupList[index], fileSizeList[index], fileModDateList[index], fileName+RESET)
-	}
-}
-
-// Prints all files on one line if we can.
-func oneLinePrinter() {
-	for _, file := range fileList {
-		fmt.Print(colorizer(file), "  ") // Print the file plus additional spacing
-	}
-	fmt.Println(RESET) // Print an additional line and reset the color.
-}
-
-// Prints all files on one column.
-func singleColumnPrinter() {
-	for _, file := range fileList {
-		fmt.Println(colorizer(file))
-		fmt.Print(RESET)
-	}
-}
-
-// The countRows function counts the number of rows that will be printed. The number is
-// determined by dividing the number of files by the maximum number of columns. However,
-// if there is a remaindera of files left over for an incomplete row, we add an additional
-// row.
-func countRows(lastRowCount, maxColumns, numOfFiles *int) int {
-	if *lastRowCount == 0 {
-		return *numOfFiles / *maxColumns
-	}
-	return *numOfFiles / *maxColumns + 1 // Add additional row if the last row is incomplete.
-}
-
-// The spacer function will add spaces to the end of each file name so that they line up
-// correctly when printing in the printTopToBottom function.
-func spacer(name string, charLength int) string {
-	return string(name + strings.Repeat(" ", maxCharLength-charLength+SPACING))
-}
-
-// Increases index count in printTopToBottom based on current position.
-// The index must take into account the fact that the last row needs files to print as well.
-// After we are certain that the last row is happy, we can then start increasing index count by
-// the number of rows minus one.
-func indexCounter(currentIndex, column, lastRowCount, numOfRows *int) int {
-	if *column >= *lastRowCount+1 {
-		return *currentIndex + *numOfRows - 1
-	} else {
-		return *currentIndex + *numOfRows
-	}
-}
-
-/* printTopToBottom takes a colorized list of files for input and gathers additional statistics required
- * for printing files from top to bottom with precision. To do that, we need to know how many files are
- * to be printed, how wide the terminal is, the maximum number of columns, how many files are on the last
- * row, and how many rows are to be printed. The first portion of this function will grab all of these
- * statistics.
- *
- * After gaining those aforementioned statistics, it is necessary to develop an algorithm for processing
- * all of this data in a manner that allows us to print each file correctly. The for printing loop contains
- * that algorithm. */
-func printTopToBottom(colorizedList []string) {
-	numOfFiles := len(fileList)
-	maxColumns := terminalWidth / (maxCharLength + SPACING)
-	lastRowCount := numOfFiles % maxColumns
-	numOfRows := countRows(&lastRowCount, &maxColumns, &numOfFiles)
-	printing := true
-	var currentRow, currentIndex int = 1, 0
-
-	for printing {
-		if currentRow < numOfRows { // Prints all but the last row.
-			for column := 1; column < maxColumns; column++ { // Prints all but the last column.
-				fmt.Print(colorizedList[currentIndex]) // Print the file.
-				currentIndex = indexCounter(&currentIndex, &column, &lastRowCount, &numOfRows)
-			}
-			fmt.Println(colorizedList[currentIndex]) // Prints the final column in a row.
-			currentRow++                             // It's time to start printing the next row.
-			currentIndex = currentRow - 1            // We need to reset this for the next row.
-		} else { // Prints the final row.
-			for index := 1; index <= lastRowCount; index++ { // This is the final print run.
-				fmt.Print(colorizedList[currentIndex]) // Print the file.
-				currentIndex += numOfRows              // Switch the index to the next file.
-			}
-			printing = false // We are finished printing -- turn the printing press off.
-		}
-	}
-}
-
-// This switch will determine how we should print. The available modes for printing are long mode,
-// which prints files one column at a time with statistics; single column mode, which prints all
-// files on one column with any statistics; single line mode, for when no mode is set and the files
-// can be printed on one line; and the default mode, which prints all files from top to bottom.
+// This switch will determine how we should print.
 func printSwitch() {
 	switch {
 	case *longMode:
@@ -516,59 +734,13 @@ func printSwitch() {
 		oneLinePrinter()
 	default:
 		printTopToBottom(getColorizedList())
-		fmt.Println(RESET) // Reset terminal at the end.
 	}
 }
 
-// NOTE: The main function
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU() + 1)
-	flag.Parse()
-	processFlags()
-
-	// Load the directory list
-	scanDirectory()
-
-	// Channels for the goroutines to check when they finish.
-	lengthDone := make(chan bool)
-	oneLineCheck := make(chan bool)
-	maxCharLengthCheck := make(chan bool)
-
-	// The goroutines used to grab all file statistics in parallel for a slight performance boost.
-	go getFileLengthList(lengthDone)
-	go getMaxCharacterLength(maxCharLengthCheck)
-	go printOneLineCheck(oneLineCheck)
-
-	// If longMode is enabled
-	if *longMode {
-		modeDone := make(chan bool)
-		modDateDone := make(chan bool)
-		sizeDone := make(chan bool)
-		userDone := make(chan bool)
-		groupDone := make(chan bool)
-		countDone := make(chan bool)
-
-		go getModeTypeList(modeDone)
-		go getModDateList(modDateDone)
-		go getFileSize(sizeDone)
-		go getUserList(userDone)
-		go getGroupList(groupDone)
-
-		<-userDone
-		<-groupDone
-		<-sizeDone
-		go countMaxSizeLength(countDone)
-		<-modeDone
-		<-modDateDone
-		<-countDone
-		fmt.Println(maxIDLength)
-	}
-
-	// Synchronize goroutines with main
-	<-lengthDone
-	<-maxCharLengthCheck
-	<-oneLineCheck
-
-	// Now that statistics have been gathered, it's time to process and print them.
-	printSwitch()
+	processFlags()  // Process flags and arguments
+	scanDirectory() // Load the directory list
+	getFileStats()  // Obtain lists of file information
+	printSwitch()   // Now that statistics have been gathered, it's time to process and print them.
 }
