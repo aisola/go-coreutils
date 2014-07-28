@@ -89,7 +89,7 @@ truncate
 tr
 *true
 tty
-tsort
+*tsort
 unexpand
 uniq
 *uname
