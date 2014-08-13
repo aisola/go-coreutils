@@ -52,55 +52,54 @@ func processFlags() {
 // Returns the integer of the current argument.
 func getNumber(currentNumber string) int {
 	number, err := strconv.Atoi(currentNumber)
-
 	// Check if the number to factor is actually a number.
 	if err != nil {
 		fmt.Printf("factor: '%s' is not a valid positive integer\n", flag.Arg(0))
 		os.Exit(0)
 	}
-
 	return number
 }
 
 // Returns a slice of all the prime factors associated with a number.
 func getFactors(number int) []int {
 	factors := make([]int, 0)
-
 	// If the number is divisible by the index, the value of the index is a factor of the number.
 	// Therefore, append the index to the slice of factors, divide the number by the factor, and
 	// reset the index to 1
-	for index := 2; index < number; index++ {
+	for index := 2; index <= number; index++ {
 		if number%index == 0 {
-			factors = append(factors, index)
-			number = number / index
-			index = 1
+			factors, number, index = append(factors, index), number / index, 1
 		}
 	}
-
-	// Append the final prime number to the factors slice.
-	factors = append(factors, number)
-
 	return factors
 }
 
 // Returns a string of the factor slice.
 func factorsToString(numbers []int) string {
 	var buffer bytes.Buffer
-
 	for _, number := range numbers {
 		buffer.WriteString(" " + strconv.Itoa(number))
 	}
-
 	return buffer.String()
 }
 
-// Prints factors for each argument given.
+// Prints factors for each argument given. If no argument is given, loop endlessly.
 func printFactors() {
-	for index := 0; index < flag.NArg(); index++ {
-		number := getNumber(flag.Arg(index))
-		factors := getFactors(number)
-		fmt.Print(number, ":", factorsToString(factors), "\n")
+	if flag.NArg() == 0 {
+		var number int
+		for {
+			fmt.Scanf("%v", &number)
+			factors := getFactors(number)
+			fmt.Print(number, ":", factorsToString(factors), "\n")
+		}
+	} else {
+		for index := 0; index < flag.NArg(); index++ {
+			number := getNumber(flag.Arg(index))
+			factors := getFactors(number)
+			fmt.Print(number, ":", factorsToString(factors), "\n")
+		}
 	}
+
 }
 
 func main() {

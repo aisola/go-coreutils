@@ -35,7 +35,7 @@ const (
               never output headers giving file names
 `
 	version_text = `
-    cat (go-coreutils) 0.1
+    tail (go-coreutils) 0.1
 
     Copyright (C) 2014, The GO-Coreutils Developers.
     This program comes with ABSOLUTELY NO WARRANTY; for deprintTails see
