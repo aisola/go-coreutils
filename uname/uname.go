@@ -2,7 +2,7 @@
 // uname.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
 //
-// Written By: Michael Murphy
+// Written By: Michael Murphy & Abram Isola
 //
 package main
 
@@ -18,33 +18,33 @@ import "syscall"
 const (
 	help_text = `
     Usage: uname [OPTION]...
-    
+
     Print certain system information.  With no OPTION, same as -s.
 
         -help        display this help and exit
         -version     output version information and exit
-        
+
         -a, all
               print all information, in the following order.
-             
+
         -s, -kernel-name
               print the kernel name
-        
+
         -n, -nodename
               print the network node hostname
-              
+
         -r, -kernel-release
               print the kernel release
-              
+
         -v, -kernel-version
               print the kernel version
-              
+
         -m, -machine
               print the machine hardware name
-              
+
         -o, -operating-system
               print the operating system
-              
+
         -p, -processor-name
               print the processor name
     `
@@ -53,7 +53,7 @@ const (
 
     Copyright (C) 2014, The GO-Coreutils Developers.
     This program comes with ABSOLUTELY NO WARRANTY; for details see
-    LICENSE. This is free software, and you are welcome to redistribute 
+    LICENSE. This is free software, and you are welcome to redistribute
     it under certain conditions in LICENSE.
 `
 )
@@ -80,22 +80,6 @@ var (
 	printProcessor      = flag.Bool("p", false, "print the processor name")
 	printProcessorLong  = flag.Bool("processor-name", false, "print the processor name")
 )
-
-// Process flags
-func processFlags() {
-	if flag.NFlag() == 0 {
-		fmt.Println(sysname)
-		os.Exit(0)
-	}
-	if *help {
-		fmt.Println(help_text)
-		os.Exit(0)
-	}
-	if *version {
-		fmt.Println(version_text)
-		os.Exit(0)
-	}
-}
 
 // Each utsname is a 65-width int array. Therefore, to convert it into something readable,
 // We must convert the int8's into a string
@@ -152,6 +136,14 @@ func getProcessorName() string {
 
 func main() {
 	flag.Parse()
+	if *help {
+		fmt.Println(help_text)
+		os.Exit(0)
+	}
+	if *version {
+		fmt.Println(version_text)
+		os.Exit(0)
+	}
 
 	// Obtain information about the system.
 	var utsname syscall.Utsname
@@ -165,8 +157,10 @@ func main() {
 	osname := getOS()
 	processorname := getProcessorName()
 
-	// If no argument is given, print only the kernel name.
-	processFlags(&sysname)
+	if flag.NFlag() == 0 {
+		fmt.Println(sysname)
+		os.Exit(0)
+	}
 
 	// Store printing information in an array.
 	printArray := make([]string, 0)
