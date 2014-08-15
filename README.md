@@ -4,12 +4,14 @@ This is a Go1 implementation of the GNU Coreutils.
 
 All files are maintained by: Abram C. Isola
 
+![CI Passing](https://magnum-ci.com/status/3ebdc7894c138b7d57e3993c0b302747.png)
+
 ### Installation
 
 via go get...
 
     $ go get github.com/aisola/go-coreutils/...
-    
+
 via git...
 
     $ git clone https://github.com/aisola/go-coreutils.git
@@ -31,7 +33,7 @@ binary sizes by 18.73% for this project (63.2 MiB to 51.4 MiB).
 
 ### Legal
 go-coreutils 0.1 is licensed under the GNU General Public License v3.
-    
+
     go-coreutils v0.1
     Copyright (C) 2014, The GO-Coreutils Developers.
 
