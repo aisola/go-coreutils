@@ -41,7 +41,7 @@ link
 ln
 *logname
 *ls
-md5sum
+*md5sum
 *mkdir
 mkfifo
 mknod
@@ -64,11 +64,11 @@ readlink
 rmdir
 runcon
 seq
-sha1sum
-sha224sum
-sha256sum
-sha384sum
-sha512sum
+*sha1sum
+*sha224sum
+*sha256sum
+*sha384sum
+*sha512sum
 shred
 shuf
 *sleep
