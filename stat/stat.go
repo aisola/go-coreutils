@@ -4,6 +4,10 @@
 //
 // Written By: Abram C. Isola, Michael Murphy
 //
+
+// +build linux
+
+
 package main
 
 import "bytes"

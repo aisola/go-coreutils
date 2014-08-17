@@ -2,10 +2,10 @@
 // ls.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
 //
-// Written By: Michael Murphy, Abram C. Isola
+// Written By: Abram C. Isola
 //
 
-// +build linux
+// +build windows
 
 
 /* TODO:
@@ -29,13 +29,12 @@ import "syscall"
 import "time"
 
 const ( // Constant variables used throughout the program.
-	TERMINAL_INFO    = 0x5413         // Used in the getTerminalWidth function
 	EXECUTABLE       = 0111           // File executable bit
 	SYMLINK          = os.ModeSymlink // Symlink bit
-	CYAN_SYMLINK     = "\x1b[36;1m"   // Cyan terminal color
-	BLUE_DIR         = "\x1b[34;1m"   // Blue terminal color
-	GREEN_EXECUTABLE = "\x1b[32;1m"   // Green terminal color
-	RESET            = "\x1b[0m"      // Reset terminal color
+	CYAN_SYMLINK     = "" // "\x1b[36;1m"   // Cyan terminal color    FIXME: COLORIZING IN WINDOWS
+	BLUE_DIR         = "" // "\x1b[34;1m"   // Blue terminal color    FIXME: COLORIZING IN WINDOWS
+	GREEN_EXECUTABLE = "" // "\x1b[32;1m"   // Green terminal color   FIXME: COLORIZING IN WINDOWS
+	RESET            = "" // "\x1b[0m"      // Reset terminal color   FIXME: COLORIZING IN WINDOWS
 	SPACING          = 1              // Spacing between columns
 	DATE_FORMAT      = "Jan _2 15:04" // Format date
 	DATE_YEAR_FORMAT = "Jan _2  2006" // If the file is from a previous year
@@ -58,7 +57,7 @@ const ( // Constant variables used throughout the program.
 
         -l    use a long listing format
         
-        -n, -numeric-uid-gid
+        -n, -numeric-uid-gid (unavailable on Windows)
               list numeric uid/gid's instead of names
 
         -r, -reverse
@@ -139,15 +138,61 @@ type termsize struct {
 
 // Obtains the current width of the terminal.
 func getTerminalWidth() uint {
-	ws := &termsize{}
-	retCode, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		uintptr(syscall.Stdin),
-		uintptr(TERMINAL_INFO),
-		uintptr(unsafe.Pointer(ws)))
-	if int(retCode) == -1 {
-		panic(errno)
-	}
-	return uint(ws.Col)
+    x, _, err := getConWinSize()
+    if err != nil { 
+        fmt.Printf("ls: %s\n", err) 
+    }
+	return uint(x)
+}
+
+func getConWinSize() (x, y int, err error) { 
+    hCon, err := syscall.Open("CONOUT$", syscall.O_RDONLY, 0) 
+    if err != nil { 
+            return 
+    } 
+    defer syscall.Close(hCon) 
+
+    sb, err := getConsoleScreenBufferInfo(hCon) 
+    if err != nil { 
+            return 
+    } 
+    x = int(sb.size.x) 
+    y = int(sb.size.y) 
+    return 
+} 
+
+var ( 
+    modkernel32 = syscall.NewLazyDLL("kernel32.dll") 
+    procGetConScrBufInfo = modkernel32.NewProc("GetConsoleScreenBufferInfo") 
+) 
+
+type coord struct { 
+    x int16 
+    y int16 
+} 
+
+type smallRect struct { 
+    left   int16 
+    top    int16 
+    right  int16 
+    bottom int16 
+} 
+
+type consoleScreenBuffer struct { 
+    size       coord 
+    cursorPos  coord 
+    attrs      int32 
+    window     smallRect 
+    maxWinSize coord
+} 
+
+func getConsoleScreenBufferInfo(hCon syscall.Handle) (sb consoleScreenBuffer, err error) { 
+    rc, _, ec := syscall.Syscall(procGetConScrBufInfo.Addr(), 2, 
+            uintptr(hCon), uintptr(unsafe.Pointer(&sb)), 0) 
+    if rc == 0 { 
+            err = syscall.Errno(ec) 
+    } 
+    return
 }
 
 // Displays error messages
@@ -248,12 +293,16 @@ func parseLine(line string) []string {
 
 // Returns user id
 func getUID(file os.FileInfo) string {
-	return fmt.Sprintf("%d", file.Sys().(*syscall.Stat_t).Uid)
+    // TODO: Figure all of this out...
+	// return fmt.Sprintf("%d", file.Sys().(*syscall.Stat_t).Uid)
+    return "0"
 }
 
 // Returns group id
 func getGID(file os.FileInfo) string {
-	return fmt.Sprintf("%d", file.Sys().(*syscall.Stat_t).Gid)
+	// TODO: Figure all of this out...
+	// return fmt.Sprintf("%d", file.Sys().(*syscall.Stat_t).Gid)
+    return "0"
 }
 
 // Checks if the date of the file is from a prior year, and if so print the year, else print

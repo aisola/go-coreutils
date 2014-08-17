@@ -4,6 +4,9 @@
 //
 // Written By: Abram C. Isola
 //
+
+// +build linux
+
 package main
 
 import "bufio"
