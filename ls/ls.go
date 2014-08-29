@@ -16,11 +16,10 @@
  */
 package main
 
-import "bytes"
 import "fmt"
-import "io"
 import "io/ioutil"
 import "os"
+import "os/exec"
 import "strings"
 import "flag"
 import "unsafe"
@@ -210,35 +209,16 @@ func scanDirectory() {
 	}
 }
 
-// Opens a file and returns it
-func openFile(file string) *os.File {
-	cached, err := os.Open(file)
-	if err != nil {
-		fmt.Printf("Error: '%s' does not exist.\n", file)
-		os.Exit(0)
-	}
-	return cached
+// Get a list of users from getent
+func bufferUsers() []string {
+	input, _ := exec.Command("getent", "passwd").Output()
+	return strings.Split(string(input[:]), "\n")
 }
 
-// Opens the passwd file and returns a buffer of it's contents.
-func bufferUsers() *bytes.Buffer {
-	buffer := bytes.NewBuffer(nil)
-	file := openFile("/etc/passwd")
-	io.Copy(buffer, file)
-	return buffer
-}
-
-// Opens the group file and returns a buffer of it's contents.
-func bufferGroups() *bytes.Buffer {
-	buffer := bytes.NewBuffer(nil)
-	file := openFile("/etc/group")
-	io.Copy(buffer, file)
-	return buffer
-}
-
-// Converts a bytes buffer into a newline-separated string array.
-func bufferToStringArray(buffer *bytes.Buffer) []string {
-	return strings.Split(buffer.String(), "\n")
+// Get a list of groups from getent
+func bufferGroups() []string {
+	input, _ := exec.Command("getent", "group").Output()
+	return strings.Split(string(input[:]), "\n")
 }
 
 // Returns a colon separated string array for use in parsing /etc/group and /etc/user
@@ -254,24 +234,6 @@ func getUID(file os.FileInfo) string {
 // Returns group id
 func getGID(file os.FileInfo) string {
 	return fmt.Sprintf("%d", file.Sys().(*syscall.Stat_t).Gid)
-}
-
-// Checks if the date of the file is from a prior year, and if so print the year, else print
-// only the hour and minute.
-func dateFormatCheck(fileModTime time.Time) string {
-	if fileModTime.Year() != time.Now().Year() {
-		return fileModTime.Format(DATE_YEAR_FORMAT)
-	} else {
-		return fileModTime.Format(DATE_FORMAT)
-	}
-}
-
-// Obtains a list of formatted file modification dates.
-func getModDateList(done chan bool) {
-	for _, file := range fileList {
-		fileModDateList = append(fileModDateList, dateFormatCheck(file.ModTime()))
-	}
-	done <- true
 }
 
 // Returns the username associated to a user ID
@@ -300,6 +262,32 @@ func lookupGroupID(gid string, groupStringArray []string) string {
 	return gid
 }
 
+// Obtains a list of user names
+func getUserList(done chan bool) {
+	userBuffer := bufferUsers()
+	for _, file := range fileList {
+		if *numericIDs {
+			fileUserList = append(fileUserList, getUID(file))
+		} else {
+			fileUserList = append(fileUserList, lookupUserID(getUID(file), userBuffer))
+		}
+	}
+	done <- true
+}
+
+// Obtains a list of group names
+func getGroupList(done chan bool) {
+	groupBuffer := bufferGroups()
+	for _, file := range fileList {
+		if *numericIDs {
+			fileGroupList = append(fileGroupList, getGID(file))
+		} else {
+			fileGroupList = append(fileGroupList, lookupGroupID(getGID(file), groupBuffer))
+		}
+	}
+	done <- true
+}
+
 // Returns the file size in either human or non-human-readable format
 func getSizeString(size int64) string {
 	if *human {
@@ -322,36 +310,28 @@ func getFileSize(done chan bool) {
 	done <- true
 }
 
-// Obtains a list of user names
-func getUserList(done chan bool) {
-	userBuffer := bufferToStringArray(bufferUsers())
-	for _, file := range fileList {
-		if *numericIDs {
-			fileUserList = append(fileUserList, getUID(file))
-		} else {
-			fileUserList = append(fileUserList, lookupUserID(getUID(file), userBuffer))
-		}
-	}
-	done <- true
-}
-
-// Obtains a list of group names
-func getGroupList(done chan bool) {
-	groupBuffer := bufferToStringArray(bufferGroups())
-	for _, file := range fileList {
-		if *numericIDs {
-			fileGroupList = append(fileGroupList, getGID(file))
-		} else {
-			fileGroupList = append(fileGroupList, lookupGroupID(getGID(file), groupBuffer))
-		}
-	}
-	done <- true
-}
-
 // Obtains a list of file character lengths.
 func getFileLengthList(done chan bool) {
 	for _, file := range fileList {
 		fileLengthList = append(fileLengthList, len(file.Name()))
+	}
+	done <- true
+}
+
+// Checks if the date of the file is from a prior year, and if so print the year, else print
+// only the hour and minute.
+func dateFormatCheck(fileModTime time.Time) string {
+	if fileModTime.Year() != time.Now().Year() {
+		return fileModTime.Format(DATE_YEAR_FORMAT)
+	} else {
+		return fileModTime.Format(DATE_FORMAT)
+	}
+}
+
+// Obtains a list of formatted file modification dates.
+func getModDateList(done chan bool) {
+	for _, file := range fileList {
+		fileModDateList = append(fileModDateList, dateFormatCheck(file.ModTime()))
 	}
 	done <- true
 }
