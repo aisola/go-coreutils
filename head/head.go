@@ -1,5 +1,5 @@
 //
-// head.go (go-coreutils) 0.1
+// tail.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
 //
 // Written By: Michael Murphy
@@ -104,14 +104,24 @@ func multiFileByteProcessor() {
 // printHeadingLines prints the first N lines from the input buffer.
 func printHeadingLines(buffer string) {
 	lineSlice := strings.Split(buffer, "\n")
-	for index := 0; index < *lines; index++ {
+	lineCount := len(lineSlice)
+	if *lines < lineCount {
+		lineCount = *lines
+	}
+	for index := 0; index < lineCount; index++ {
 		fmt.Println(lineSlice[index])
 	}
 }
 
 // printHeadingBytes prints the first N bytes from the input buffer.
 func printHeadingBytes(buffer []byte) {
-	for index := 0; index < *bytesF; index++ {
+	var byteCount int
+	if *bytesF > len(buffer) {
+		byteCount = len(buffer)
+	} else {
+		byteCount = *bytesF
+	}
+	for index := 0; index < byteCount; index++ {
 		fmt.Print(string(buffer[index]))
 	}
 }
