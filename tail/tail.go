@@ -114,7 +114,7 @@ func printTailingLines(buffer string) {
 	if *lines < lineCount {
 		lineCount = *lines
 	}
-	for index := totalLines - *lines; index < lineCount; index++ {
+	for index := totalLines - lineCount; index < lineCount; index++ {
 		fmt.Println(lineSlice[index])
 	}
 }
