@@ -61,7 +61,7 @@ printf
 *pwd
 readlink
 *rm
-rmdir
+*rmdir
 runcon
 seq
 *sha1sum
