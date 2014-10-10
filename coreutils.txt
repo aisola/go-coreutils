@@ -78,7 +78,7 @@ split
 stty
 su
 sum
-sync
+*sync
 tac
 *tail
 tee
