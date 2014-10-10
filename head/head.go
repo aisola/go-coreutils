@@ -11,68 +11,161 @@ import "bytes"
 import "flag"
 import "fmt"
 import "io"
+import "io/ioutil"
 import "os"
 import "strings"
 
 const (
 	help_text string = `
-    Usage: printHead [OPTION]... [FILE]...
+    Usage: head [OPTION]... [FILE]...
        
-    Print the first 10 lines of each FILE to standard output. With more than one FILE, precede
-    each with a printHeader giving the file name. With no FILE, or when FILE is -, read standard input.
+    Print the first 10 lines of each FILE to standard output. With more than one FILE, precede each with a header giving the file name. With no FILE, or when FILE is -, read standard input.
     
     
     Mandatory arguments to long options are mandatory for short options too.
 
        -help        display this help and exit
        -version     output version information and exit
-       
-       -c, -bytes=K
-             print the first K bytes of each file
-       
+
+       -c, --bytes=K
+              output the first K bytes; or use -n +K to output starting with the Kth byte.
+
        -n, -lines=K
-              output the first K lines
+              output the first K lines; or use -n +K to output starting with 
+the Kth
 
        -q, -quiet, -silent
-              never output printHeaders giving file names
+              never output headers giving file names
 `
 	version_text = `
-    cat (go-coreutils) 0.1
+    head (go-coreutils) 0.1
 
     Copyright (C) 2014, The GO-Coreutils Developers.
-    This program comes with ABSOLUTELY NO WARRANTY; for deprintHeads see
+    This program comes with ABSOLUTELY NO WARRANTY; for deprintTails see
     LICENSE. This is free software, and you are welcome to redistribute 
     it under certain conditions in LICENSE.
 `
-	bytes_text  = "print the first K bytes of each file"
-	lines_text  = "output the last K lines"
-	silent_text = "never output printHeaders giving file names"
+	bytes_text  = "output the first K bytes"
+	lines_text  = "output the first K lines"
+	silent_text = "never output headers giving file names"
 )
 
 var (
-	help          = flag.Bool("help", false, help_text)
-	version       = flag.Bool("version", false, version_text)
-	bytesMode     = flag.Int("c", 0, bytes_text)
-	bytesModeLong = flag.Int("bytes", 0, bytes_text)
-	lines         = flag.Int("n", 10, lines_text)
-	linesLong     = flag.Int("lines", 10, lines_text)
-	silent        = flag.Bool("q", false, silent_text)
-	silentLong    = flag.Bool("quiet", false, silent_text)
-	silentLong2   = flag.Bool("silent", false, silent_text)
+	help        = flag.Bool("help", false, help_text)
+	version     = flag.Bool("version", false, version_text)
+	lines       = flag.Int("n", 10, lines_text)
+	linesLong   = flag.Int("lines", 10, lines_text)
+	bytesF      = flag.Int("c", 0, bytes_text)
+	bytesFLong  = flag.Int("bytes", 0, bytes_text)
+	silent      = flag.Bool("q", false, silent_text)
+	silentLong  = flag.Bool("quiet", false, silent_text)
+	silentLong2 = flag.Bool("silent", false, silent_text)
 )
 
-/* The processFlags function will check initial values of flags and act
- * accordingly. */
-
-func processFlags() {
-	if *bytesModeLong != 0 {
-		*bytesMode = *bytesModeLong
+// bufferFile returns a byte slice of the file contents.
+func bufferFile(s string) []byte {
+	buffer, err := ioutil.ReadFile(s)
+	if err != nil {
+		fmt.Println(err, "wc: "+s+": No such file or directory")
+		os.Exit(0)
 	}
+	return buffer
+}
+
+// silentCheck prints the file name if silent mode is enabled.
+func silentCheck(filename string) {
+	if !*silent {
+		fmt.Printf("==> %s <==\n", filename)
+	}
+}
+
+// multiFileLineProcessor prints that first K lines of every file.
+func multiFileLineProcessor() {
+	for index, currentFile := range flag.Args() {
+		silentCheck(currentFile)
+		printHeadingLines(string(bufferFile(currentFile)))
+		if index+1 != flag.NArg() && !*silent {
+			fmt.Println()
+		}
+	}
+}
+
+// multiFileByteProcessor prints the first K bytes of every file.
+func multiFileByteProcessor() {
+	for index, currentFile := range flag.Args() {
+		silentCheck(currentFile)
+		printHeadingBytes(bufferFile(currentFile))
+		if index+1 != flag.NArg() && !*silent {
+			fmt.Println()
+		}
+	}
+}
+
+// printHeadingLines prints the first N lines from the input buffer.
+func printHeadingLines(buffer string) {
+	lineSlice := strings.Split(buffer, "\n")
+	for index := 0; index < *lines; index++ {
+		fmt.Println(lineSlice[index])
+	}
+}
+
+// printHeadingBytes prints the first N bytes from the input buffer.
+func printHeadingBytes(buffer []byte) {
+	for index := 0; index < *bytesF; index++ {
+		fmt.Print(string(buffer[index]))
+	}
+}
+
+// getStdin will get input from stdin if there are no file arguments for tail.
+func getStdin() {
+	buffer := bytes.NewBuffer(nil)
+	io.Copy(buffer, os.Stdin)
+	if *bytesF == 0 {
+		printHeadingLines(buffer.String())
+	} else {
+		printHeadingBytes(buffer.Bytes())
+	}
+}
+
+// oneFile will use the first file argument as an argument for tail.
+func oneFile() {
+	if *bytesF == 0 {
+		printHeadingLines(string(bufferFile(flag.Arg(0))))
+	} else {
+		printHeadingBytes(bufferFile(flag.Arg(0)))
+	}
+}
+
+// multipleFiles will launch the proper function for looping through all files.
+func multipleFiles() {
+	if *bytesF == 0 {
+		multiFileLineProcessor()
+	} else {
+		multiFileByteProcessor()
+	}
+}
+
+func main() {
+	switch {
+	case flag.NArg() == 0 || flag.Arg(0) == "-":
+		getStdin()
+	case flag.NArg() == 1:
+		oneFile()
+	default:
+		multipleFiles()
+	}
+}
+
+func init() {
+	flag.Parse()
 	if *linesLong != 10 {
 		*lines = *linesLong
 	}
 	if *silentLong || *silentLong2 {
 		*silent = true
+	}
+	if *bytesFLong != 0 {
+		*bytesF = *bytesFLong
 	}
 	if *help {
 		fmt.Println(help_text)
@@ -81,108 +174,5 @@ func processFlags() {
 	if *version {
 		fmt.Println(version_text)
 		os.Exit(0)
-	}
-}
-
-func errorChecker(input error, message string) {
-	if input != nil {
-		fmt.Println(message)
-		os.Exit(0)
-	}
-}
-
-/* The bufferLines function will open the file and copy it's contents into a
- * bytes.Buffer, which is then sent to the printHead function for printing. */
-
-func bufferLines(s string) {
-	buffer := bytes.NewBuffer(nil)
-	file, err := os.Open(s)
-	errorChecker(err, "wc: "+s+": No such file or directory")
-	io.Copy(buffer, file)
-	file.Close()
-	printHead(buffer)
-}
-
-/* The bufferBytes function will create a byte array as long as the specified
- * bytesMode parameter is set for, and then reads the file into that buffer and
- * prints the results. */
-
-func bufferBytes(s string) {
-	bytesBuffer := make([]byte, *bytesMode)
-	file, err := os.Open(s)
-	errorChecker(err, "wc: "+s+": No such file or directory")
-	file.Read(bytesBuffer)
-	file.Close()
-	fmt.Println(string(bytesBuffer))
-}
-
-// If silent mode is enabled, do not print the file name.
-
-func silentCheck(filename string) {
-	if !*silent {
-		fmt.Printf("==> %s <==\n", filename)
-	}
-}
-
-/* If there is more than one file to process, this function will loop through
- * each file argument, check if silent is enabled, then check if
- * we are to be printing a specified number of bytes or lines, and sends the
- * current file to either bufferBytes or bufferLines for printing.
- *
- * In addition to printing lines, this function will add a newline before every
- * new file. */
-
-func multiFileProcessor() {
-	for index, currentFile := range flag.Args() {
-		silentCheck(currentFile)
-		if *bytesMode != 0 {
-			bufferBytes(currentFile)
-		} else {
-			bufferLines(currentFile)
-			if index+1 != flag.NArg() && !*silent {
-				fmt.Println()
-			}
-		}
-	}
-}
-
-/* The bufferToStringArray function will convert the bytes.Buffer into a string
- * array. */
-
-func bufferToStringArray(buffer *bytes.Buffer) []string {
-	bufferString := buffer.String()
-	return strings.Split(bufferString, "\n")
-}
-
-/* The printHead function will take the buffered bytes input and send it to
- * bufferToStringArray. After obtaining the string array of the buffer, printHead will
- * loop through each line, ending at the Kth line. */
-
-func printHead(buffer *bytes.Buffer) {
-	stringArray := bufferToStringArray(buffer)
-	for index := 0; index < *lines; index++ {
-		fmt.Println(stringArray[index])
-	}
-}
-
-func main() {
-	flag.Parse()
-	processFlags()
-
-	/* If no file is given, or the file is -, read standard input
-	 * and output to standard output. Otherwise, open the file and
-	 * begin reading it. */
-
-	switch { // If there are no files or the file is "-", copy stdin to stdout.
-	case flag.NArg() < 1 || flag.Arg(0) == "-":
-		io.Copy(os.Stdout, os.Stdin)
-	case flag.NArg() == 1: // If there is only one file
-		if *bytesMode != 0 {
-			bufferBytes(flag.Arg(0))
-		} else {
-			bufferLines(flag.Arg(0))
-		}
-	default: // If there is more than one file
-		multiFileProcessor()
 	}
 }
