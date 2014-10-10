@@ -75,43 +75,7 @@ var (
 	version           = flag.Bool("version", false, "output version information")
 )
 
-// Process long-forms of flags to short-form.
-func processFlags() {
-	if *help {
-		fmt.Println(HELP_TEXT)
-		os.Exit(0)
-	}
-	if *version {
-		fmt.Println(VERSION_TEXT)
-		os.Exit(0)
-	}
-	if *printUTCLong || *printUTCLonger {
-		*printUTC = true
-	}
-	if *printISO8601Long != "" {
-		*printISO8601 = *printISO8601Long
-	}
-	if *printRFC1123Long {
-		*printRFC1123 = true
-	}
-	if *referenceModeLong {
-		*referenceMode = true
-	}
-}
-
-// Check flags to see what mode we should be printing with.
-func flagCheck() {
-	switch {
-	case *referenceMode && flag.NArg() < 1:
-		fmt.Println("date: option requires an argument -- 'r'")
-	case *referenceMode:
-		getReference()
-	default:
-		printDate(getTime())
-	}
-}
-
-// Returns the current time
+// getTime returns the current time in either the default time zone or UTC.
 func getTime() time.Time {
 	if *printUTC {
 		return time.Now().UTC()
@@ -120,7 +84,7 @@ func getTime() time.Time {
 	}
 }
 
-// Returns the modification time of the file
+// getModificationTime returns the modification time of the file.
 func getModificationTime(file os.FileInfo) time.Time {
 	if *printUTC {
 		return file.ModTime().UTC()
@@ -129,7 +93,7 @@ func getModificationTime(file os.FileInfo) time.Time {
 	}
 }
 
-// Print the time based on the layout format
+// printDate prints the time based on the layout format.
 func printDate(t time.Time) {
 	switch {
 	case *printRFC1123:
@@ -160,18 +124,47 @@ func printDate(t time.Time) {
 	}
 }
 
-// Opens the reference file and and sends the modification time to printDate.
-func getReference() {
+// getReference creates an os.FileInfo of the reference file and returns it.
+func getReference() os.FileInfo {
 	file, err := os.Stat(flag.Arg(0))
 	if err != nil {
 		fmt.Printf("date: %s - No such file or directory\n", flag.Arg(0))
 		os.Exit(0)
 	}
-	printDate(getModificationTime(file))
+	return file
 }
 
 func main() {
-	flag.Parse()   // Parse flags from command line.
-	processFlags() // Process long-forms of flags to short-form.
-	flagCheck()    // Check flags to see what mode we should be printing with.
+	switch {
+	case *referenceMode && flag.NArg() < 1:
+		fmt.Println("date: option requires an argument -- 'r'")
+	case *referenceMode:
+		printDate(getModificationTime(getReference()))
+	default:
+		printDate(getTime())
+	}
+}
+
+func init() {
+	flag.Parse()
+	if *help {
+		fmt.Println(HELP_TEXT)
+		os.Exit(0)
+	}
+	if *version {
+		fmt.Println(VERSION_TEXT)
+		os.Exit(0)
+	}
+	if *printUTCLong || *printUTCLonger {
+		*printUTC = true
+	}
+	if *printISO8601Long != "" {
+		*printISO8601 = *printISO8601Long
+	}
+	if *printRFC1123Long {
+		*printRFC1123 = true
+	}
+	if *referenceModeLong {
+		*referenceMode = true
+	}
 }
