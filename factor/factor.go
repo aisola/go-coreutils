@@ -38,7 +38,6 @@ var (
 	version = flag.Bool("version", false, "display version information")
 )
 
-
 type factorList []int
 
 // toString returns the factorList as a string.
@@ -61,14 +60,14 @@ func (numbers *factorList) toString() string {
 func getFactorList(number int) factorList {
 	var factors factorList
 	for index := 2; index <= number; index += 2 {
-		if number % index == 0 {
+		if number%index == 0 {
 			factors = append(factors, index)
 			number /= index
 			index = 0
-		} else if index * index > number {
+		} else if index*index > number {
 			factors = append(factors, number)
 			break
-		} else if index * index == number {
+		} else if index*index == number {
 			factors = append(factors, index)
 			factors = append(factors, index)
 			break
@@ -86,7 +85,7 @@ func getNumber(currentNumber string) int {
 	number, err := strconv.Atoi(currentNumber)
 	if err != nil {
 		fmt.Printf("factor: '%s' is not a valid positive integer\n",
-				flag.Arg(0))
+			flag.Arg(0))
 		os.Exit(0)
 	}
 	return number
