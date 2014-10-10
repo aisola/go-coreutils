@@ -114,7 +114,7 @@ func printTailingLines(buffer string) {
 	if *lines < lineCount {
 		lineCount = *lines
 	}
-	for index := totalLines - lineCount; index < lineCount; index++ {
+	for index := totalLines - lineCount; index < totalLines; index++ {
 		fmt.Println(lineSlice[index])
 	}
 }
@@ -126,7 +126,7 @@ func printTailingBytes(buffer []byte) {
 	if *bytesF < byteCount {
 		byteCount = *bytesF 
 	}
-	for index := totalBytes - byteCount; index < byteCount; index++ {
+	for index := totalBytes - byteCount; index < totalBytes; index++ {
 		fmt.Print(string(buffer[index]))
 	}
 }
