@@ -38,7 +38,79 @@ var (
 	version = flag.Bool("version", false, "display version information")
 )
 
-func processFlags() {
+
+type factorList []int
+
+// toString returns the factorList as a string.
+func (numbers *factorList) toString() string {
+	var buffer bytes.Buffer
+	for _, number := range *numbers {
+		buffer.WriteString(" " + strconv.Itoa(number))
+	}
+	return buffer.String()
+}
+
+/* getFactorList generates a factorList type containing all of the prime factors
+ * of the 'number' input. The prime seive used will first check if the number is
+ * divisible by the index, and if true, appends the index to the factor list. If
+ * the 'index' value is greater than the square root of the 'number', the value
+ * of 'number' is also a prime factor. If the square root of 'number' is equal
+ * to 'index', then we can add 'index' twice and exit. If the value of 'index'
+ * is two, change it to one so that we will only start checking for odd numbers
+ * as prime candidates. */
+func getFactorList(number int) factorList {
+	var factors factorList
+	for index := 2; index <= number; index += 2 {
+		if number % index == 0 {
+			factors = append(factors, index)
+			number /= index
+			index = 0
+		} else if index * index > number {
+			factors = append(factors, number)
+			break
+		} else if index * index == number {
+			factors = append(factors, index)
+			factors = append(factors, index)
+			break
+		}
+		if index == 2 {
+			index = 1
+		}
+	}
+	return factors
+}
+
+/* getNumber parses the input number in string format and returns the value
+ * as a number if it really is a number -- else returns an error. */
+func getNumber(currentNumber string) int {
+	number, err := strconv.Atoi(currentNumber)
+	if err != nil {
+		fmt.Printf("factor: '%s' is not a valid positive integer\n",
+				flag.Arg(0))
+		os.Exit(0)
+	}
+	return number
+}
+
+func main() {
+	if flag.NArg() == 0 {
+		var number int
+		for {
+			fmt.Scan(&number)
+			factors := getFactorList(number)
+			fmt.Print(number, ":", factors.toString(), "\n")
+		}
+	} else {
+		for index := 0; index < flag.NArg(); index++ {
+			number := getNumber(flag.Arg(index))
+			factors := getFactorList(number)
+			fmt.Print(number, ":", factors.toString(), "\n")
+		}
+	}
+}
+
+func init() {
+	flag.Parse()
 	if *help {
 		fmt.Println(help_text)
 		os.Exit(0)
@@ -47,63 +119,4 @@ func processFlags() {
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
-}
-
-// Returns the integer of the current argument.
-func getNumber(currentNumber string) int {
-	number, err := strconv.Atoi(currentNumber)
-	// Check if the number to factor is actually a number.
-	if err != nil {
-		fmt.Printf("factor: '%s' is not a valid positive integer\n", flag.Arg(0))
-		os.Exit(0)
-	}
-	return number
-}
-
-// Returns a slice of all the prime factors associated with a number.
-func getFactors(number int) []int {
-	factors := make([]int, 0)
-	// If the number is divisible by the index, the value of the index is a factor of the number.
-	// Therefore, append the index to the slice of factors, divide the number by the factor, and
-	// reset the index to 1
-	for index := 2; index <= number; index++ {
-		if number%index == 0 {
-			factors, number, index = append(factors, index), number / index, 1
-		}
-	}
-	return factors
-}
-
-// Returns a string of the factor slice.
-func factorsToString(numbers []int) string {
-	var buffer bytes.Buffer
-	for _, number := range numbers {
-		buffer.WriteString(" " + strconv.Itoa(number))
-	}
-	return buffer.String()
-}
-
-// Prints factors for each argument given. If no argument is given, loop endlessly.
-func printFactors() {
-	if flag.NArg() == 0 {
-		var number int
-		for {
-			fmt.Scanf("%v", &number)
-			factors := getFactors(number)
-			fmt.Print(number, ":", factorsToString(factors), "\n")
-		}
-	} else {
-		for index := 0; index < flag.NArg(); index++ {
-			number := getNumber(flag.Arg(index))
-			factors := getFactors(number)
-			fmt.Print(number, ":", factorsToString(factors), "\n")
-		}
-	}
-
-}
-
-func main() {
-	flag.Parse()
-	processFlags()
-	printFactors()
 }
