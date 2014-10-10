@@ -109,22 +109,24 @@ func splitAndCountLines(buffer string) ([]string, int) {
 
 // printTailingLines prints the last N lines from the input buffer.
 func printTailingLines(buffer string) {
-	lineSlice, lineCount := splitAndCountLines(buffer)
-	if *lines > lineCount {
-		*lines = lineCount
+	lineSlice, totalLines := splitAndCountLines(buffer)
+	lineCount := totalLines
+	if *lines < lineCount {
+		lineCount = *lines
 	}
-	for index := lineCount - *lines; index < lineCount; index++ {
+	for index := totalLines - *lines; index < lineCount; index++ {
 		fmt.Println(lineSlice[index])
 	}
 }
 
 // printTailingBytes prints the last N bytes from the input buffer.
 func printTailingBytes(buffer []byte) {
-	byteCount := len(buffer)
-	if *bytesF > byteCount {
-		*bytesF = byteCount
+	totalBytes := len(buffer)
+	byteCount := totalBytes
+	if *bytesF < byteCount {
+		byteCount = *bytesF 
 	}
-	for index := byteCount - *bytesF; index < byteCount; index++ {
+	for index := totalBytes - byteCount; index < byteCount; index++ {
 		fmt.Print(string(buffer[index]))
 	}
 }
