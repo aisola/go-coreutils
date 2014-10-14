@@ -4,19 +4,29 @@
 //
 // Written By: Michael Murphy
 //
-
 package main
 
 import "bytes"
 import "flag"
 import "fmt"
 import "io"
-import "net"
 import "os"
 import "strings"
 
-const (
-	help_text string = `
+var (
+	countBytes              = flag.Bool("c", false, "Print the byte counts")
+	countBytesL             = flag.Bool("bytes", false, "Print the byte counts")
+	countCharacters         = flag.Bool("m", false, "Print the character counts")
+	countCharactersL        = flag.Bool("chars", false, "Print the character counts")
+	countLines              = flag.Bool("l", false, "Print the newline counts")
+	countLinesL             = flag.Bool("lines", false, "Print the newline counts")
+	countSLOC               = flag.Bool("sloc", false, "Print the source lines of code")
+	occurrenceRef           = flag.String("o", "", "Print the occurrences of a particular word or phrase")
+	countWords              = flag.Bool("w", false, "Print the word counts")
+	countWordsL             = flag.Bool("words", false, "Print the word counts")
+	maxLineLength           = flag.Bool("L", false, "Print the length of the longest line")
+	maxLineLengthL          = flag.Bool("max-line-length", false, "Print the length of the longest line")
+	help_text        string = `
     Usage: wc [OPTION]... [FILE]...
        
     Print newline, word, and byte counts for each FILE, and a total line if
@@ -53,80 +63,34 @@ const (
               print the word counts
 `
 	version_text = `
-    cat (go-coreutils) 0.1
+    wc (go-coreutils) 0.1
 
     Copyright (C) 2014, The GO-Coreutils Developers.
     This program comes with ABSOLUTELY NO WARRANTY; for details see
     LICENSE. This is free software, and you are welcome to redistribute 
     it under certain conditions in LICENSE.
 `
-	bytes_text       = "Print the byte counts"
-	characters_text  = "Print the character counts"
-	lines_text       = "Print the newline counts"
-	sloc_text        = "Print the source lines of code"
-	words_text       = "Print the word counts"
-	occurrences_text = "Print the occurrences of a particular word or phrase"
-	linelength_text  = "Print the length of the longest line"
 )
 
-var (
-	countBytes          = flag.Bool("c", false, bytes_text)
-	countBytesLong      = flag.Bool("bytes", false, bytes_text)
-	countCharacters     = flag.Bool("m", false, characters_text)
-	countCharactersLong = flag.Bool("chars", false, characters_text)
-	countLines          = flag.Bool("l", false, lines_text)
-	countLinesLong      = flag.Bool("lines", false, lines_text)
-	countSLOC           = flag.Bool("sloc", false, sloc_text)
-	occurrenceReference = flag.String("o", "", occurrences_text)
-	countWords          = flag.Bool("w", false, words_text)
-	countWordsLong      = flag.Bool("words", false, words_text)
-	maxLineLength       = flag.Bool("L", false, linelength_text)
-	maxLineLengthLong   = flag.Bool("max-line-length", false, linelength_text)
-)
-
-// The processFlags function will process the long forms of flags.
-func processFlags() {
-	switch {
-	case *countBytesLong:
-		*countBytes = true
-	case *countLinesLong:
-		*countLines = true
-	case *countCharactersLong:
-		*countCharacters = true
-	case *countWordsLong:
-		*countWords = true
-	case *maxLineLengthLong:
-		*maxLineLength = true
-	}
+// printAndExit will print a message and then exit the program.
+func printAndExit(message string) {
+	fmt.Println(message)
+	os.Exit(0)
 }
 
-// errorChecker performs error handling via printing an error message and then
-// cleanly exiting the program.
-func errorChecker(input error, message string) {
-	if input != nil {
-		fmt.Println(message)
-		os.Exit(0)
+// openFile will open the file and check for errors, then return the file
+func openFile(s string) *os.File {
+	fi, err := os.Open(s)
+	if err != nil {
+		printAndExit("wc: " + s + ": No such file or directory")
 	}
+	return fi
 }
 
-// The openFile function will open the file and check for errors.
-func openFile(s string) (io.ReadWriteCloser, error) {
-	fi, err := os.Stat(s)
-	errorChecker(err, "wc: "+s+": No such file or directory")
-
-	if fi.Mode()&os.ModeSocket != 0 {
-		return net.Dial("unix", s)
-	}
-	return os.Open(s)
-}
-
-/* To find the maximum string length, we must loop through a newline-delimited
- * string while counting the length of each line with len(). If the line is
- * longer than the longest recorded line before it, maxStringLength will be
- * updated to reflect it. */
-func countMaxStringLength(input []string) int {
+// maxStrLength loops through each line to find the longest line.
+func maxStrLength(buffer *bytes.Buffer) int {
 	var maxStringLength int
-	for _, line := range input {
+	for _, line := range strings.Split(buffer.String(), "\n") {
 		if len(line) > maxStringLength {
 			maxStringLength = len(line)
 		}
@@ -134,17 +98,12 @@ func countMaxStringLength(input []string) int {
 	return maxStringLength
 }
 
-// Converts a bytes buffer into a newline-separated string array.
+// bufferToStringArray returns the buffer as a newline-separated string slice.
 func bufferToStringArray(buffer *bytes.Buffer) []string {
 	return strings.Split(buffer.String(), "\n")
 }
 
-// Removes empty spaces from the end and beginning of lines
-func removeSpaces(line string) string {
-	return strings.TrimSpace(line)
-}
-
-// Checks if the line is empty, and returns true if true
+// isEmpty checks if the line is empty, and returns true if true
 func isEmptyLine(line string) bool {
 	if len(line) < 1 {
 		return true
@@ -152,88 +111,95 @@ func isEmptyLine(line string) bool {
 	return false
 }
 
-// Checks if the line is a comment, and returns true if true.
-func isComment(line string) bool {
-	hasprefix := strings.HasPrefix
-	return hasprefix(line, "//") || hasprefix(line, "* ") ||
-		hasprefix(line, "/*") || hasprefix(line, "*/")
+/* removeSpacing removes tabs and spaces from the input line. This is useful
+ * for properly detecting the correct SLOC. */
+func removeSpacing(line *string) {
+	*line = strings.Replace(*line, "\t", "", -1)
+	*line = strings.Replace(*line, " ", "", -1)
 }
 
-// Counts the source lines of code
-func slocCounter(buffer *bytes.Buffer) int {
-	lines := bufferToStringArray(buffer)
-	var count int
+/* isCode checks if the line is code, and returns true if true. It is
+ * currently optimized for counting SLOC in Go programs. */
+func isCode(line string) bool {
+	removeSpacing(&line)
+	prefix := strings.HasPrefix // make an alias for 'HasPrefix'
+	return prefix(line, "//") || prefix(line, " *") || prefix(line, "/*") ||
+		prefix(line, "*/") || prefix(line, "{") && len(line) == 1 ||
+		prefix(line, "}") && len(line) == 1 || prefix(line, ")") ||
+		prefix(line, "package") || prefix(line, "import") ||
+		prefix(line, "var (") || prefix(line, "const (")
+}
 
-	for _, line := range lines {
-		if !isEmptyLine(line) && !isComment(line) {
+// slocCounter counts the source lines of code
+func slocCounter(buffer *bytes.Buffer, count int) int {
+	for _, line := range bufferToStringArray(buffer) {
+		if !isEmptyLine(line) && !isCode(line) {
 			count++
 		}
 	}
 	return count
 }
 
-// Counts the number of occurences of occurrenceReference.
+// occurrenceCounter counts the number of occurrences of occurrenceRef.
 func occurrenceCounter(buffer *bytes.Buffer) int {
-	return strings.Count(buffer.String(), *occurrenceReference)
+	return strings.Count(buffer.String(), *occurrenceRef)
 }
 
-/* The bufferProcessor function will take the buffered input and process it
- * uniquely based on which flag was given to the program. */
-func bufferProcessor(fileName *string, buffer *bytes.Buffer) {
+// lineCount returns the number of lines by splitting the buffer's newlines.
+func lineCount(buffer *bytes.Buffer) int {
+	return strings.Count(buffer.String(), "\n")
+}
+
+// wordcount returns the number of words by splitting the buffer's spaces/fields.
+func wordCount(buffer *bytes.Buffer) int {
+	return len(strings.Fields(buffer.String()))
+}
+
+// bufferProcessor will print information relating to the input flag.
+func bufferProcessor(fileName string, buffer *bytes.Buffer) {
 	switch {
-	case *countLines: // Print the number of lines
-		fmt.Println(strings.Count(buffer.String(), "\n"), *fileName)
-	case *countWords: // Print the number of words
-		fmt.Println(len(strings.Fields(buffer.String())), *fileName)
-	case *countCharacters: // Print the number of characters (same as bytes?)
-		fmt.Println(buffer.Len(), *fileName)
-	case *countBytes: // Print the number of bytes
-		fmt.Println(buffer.Len(), *fileName)
-	case *maxLineLength: // Print the length of the longest line
-		fmt.Println(countMaxStringLength(strings.Split(buffer.String(), "\n")), *fileName)
+	case *countBytes || *countBytesL:
+		fmt.Println(buffer.Len(), fileName)
+	case *countCharacters || *countCharactersL:
+		fmt.Println(buffer.Len(), fileName)
+	case *countLines || *countLinesL:
+		fmt.Println(lineCount(buffer), fileName)
+	case *maxLineLength || *maxLineLengthL:
+		fmt.Println(maxStrLength(buffer), fileName)
+	case *countWords || *countWordsL:
+		fmt.Println(wordCount(buffer), fileName)
 	case *countSLOC:
-		fmt.Println(slocCounter(buffer), *fileName)
-	case len(*occurrenceReference) != 0:
-		fmt.Println(occurrenceCounter(buffer), *fileName)
-	default:
-		fmt.Println(strings.Count(buffer.String(), "\n"), len(strings.Fields(buffer.String())), buffer.Len(), *fileName)
+		fmt.Println(slocCounter(buffer, 0), fileName)
+	case len(*occurrenceRef) != 0: // Count occurences if not empty.
+		fmt.Println(occurrenceCounter(buffer), fileName)
+	default: // Print all if no argument is given.
+		fmt.Println(lineCount(buffer), wordCount(buffer), buffer.Len(),
+			fileName)
 	}
 }
 
 func main() {
+	if flag.NArg() == 0 || flag.Arg(0) == "-" {
+		buffer := bytes.NewBuffer(nil) // create a buffer
+		io.Copy(buffer, os.Stdin)      // copy stdin into the buffer
+		bufferProcessor("", buffer)    // print the results
+	} else {
+		for file := 0; file < flag.NArg(); file++ {
+			buffer := bytes.NewBuffer(nil)
+			io.Copy(buffer, openFile(flag.Arg(file)))
+			bufferProcessor(flag.Arg(file), buffer)
+		}
+	}
+}
+
+func init() {
 	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()
-	processFlags() // Process long-form flags to their short-form variants.
-	args := flag.Args()
-	buffer := bytes.NewBuffer(nil) // Used to buffer the input
-
-	// Display help information
-
 	if *help {
-		fmt.Println(help_text)
-		os.Exit(0)
+		printAndExit(help_text)
 	}
-
-	// Display version information
-
 	if *version {
-		fmt.Println(version_text)
-		os.Exit(0)
+		printAndExit(version_text)
 	}
-
-	/* If no file is given, or the file is -, read standard input
-	 * and output to standard output. Otherwise, open the file and
-	 * begin reading it. */
-
-	if len(args) < 1 || args[0] == "-" {
-		io.Copy(os.Stdout, os.Stdin)
-	} else {
-		file, err := openFile(args[0])
-		errorChecker(err, "wc: "+args[0]+": No such file or directory")
-		io.Copy(buffer, file)
-		file.Close()
-	}
-
-	bufferProcessor(&args[0], buffer) // Send the buffer for processing.
 }

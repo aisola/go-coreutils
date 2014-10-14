@@ -7,13 +7,11 @@
 
 // +build linux
 
-
 package main
 
-import "bytes"
 import "flag"
 import "fmt"
-import "io"
+import "io/ioutil"
 import "os"
 import "runtime"
 import "strings"
@@ -85,60 +83,116 @@ var (
 	printProcessorLong  = flag.Bool("processor-name", false, "print the processor name")
 )
 
-// Each utsname is a 65-width int array. Therefore, to convert it into something readable,
-// We must convert the int8's into a string
+// sysinfo stores all information regarding the system in strings.
+type sysinfo struct {
+	name      string
+	node      string
+	release   string
+	version   string
+	machine   string
+	domain    string
+	os        string
+	processor string
+}
+
+// utsnameToString converts the utsname to a string and returns it.
 func utsnameToString(unameArray [65]int8) string {
 	var byteString [65]byte
-
 	var indexLength int
 	for ; unameArray[indexLength] != 0; indexLength++ {
 		byteString[indexLength] = uint8(unameArray[indexLength])
 	}
-	return string(byteString[0:indexLength])
+	return string(byteString[:indexLength])
 }
 
 // Returns the operating system name.
 //TODO: Add additional operating systems.
 func getOS() string {
 	var osname string
-
 	if runtime.GOOS == "linux" {
 		osname = "GNU/Linux"
 	}
-
 	return osname
 }
 
-// Buffers /proc/cpuinfo into memory for parsing.
-func bufferCPUInfo() *bytes.Buffer {
-	buffer := bytes.NewBuffer(nil)
-	cached, _ := os.Open("/proc/cpuinfo")
-	io.Copy(buffer, cached)
-	return buffer
+// bufferCPUInfo returns a newline-delimited string slice of '/proc/cpuinfo'.
+func bufferCPUInfo() []string {
+	cached, _ := ioutil.ReadFile("/proc/cpuinfo")
+	return strings.Split(string(cached), "\n")
 }
 
-// Converts a bytes buffer into a newline-separated string array.
-func bufferToStringArray(buffer *bytes.Buffer) []string {
-	return strings.Split(buffer.String(), "\n")
-}
-
-// Parses the cpuinfo file for CPU information
-func parseCPUInfo() string {
-	infoArray := bufferToStringArray(bufferCPUInfo())
-	modelLine := infoArray[4] // model name is on the fifth line.
-	return modelLine[13:]     // The name information is stored after the 18th char.
-}
-
-// Returns the processor name
+// getProcessorName returns the processor name.
 func getProcessorName() string {
 	if runtime.GOOS == "linux" {
-		return parseCPUInfo()
+		return bufferCPUInfo()[4][13:]
 	} else {
 		return "unknown"
 	}
 }
 
+// getSystemInfo returns a sysinfo struct containing system information.
+func getSystemInfo() *sysinfo {
+	var utsname syscall.Utsname
+	_ = syscall.Uname(&utsname)
+	sys := sysinfo{
+		name:      utsnameToString(utsname.Sysname),
+		node:      utsnameToString(utsname.Nodename),
+		release:   utsnameToString(utsname.Release),
+		version:   utsnameToString(utsname.Version),
+		machine:   utsnameToString(utsname.Machine),
+		domain:    utsnameToString(utsname.Domainname),
+		os:        getOS(),
+		processor: getProcessorName(),
+	}
+	return &sys
+}
+
+/* unameString generates a string for printing based on input arguments and
+ * system information gathered by 'sys'. */
+func (sys *sysinfo) unameString() string {
+	if flag.NFlag() == 0 {
+		return sys.name
+	}
+	printArray := make([]string, 0)
+	if *printAll {
+		printArray = append(printArray,
+			fmt.Sprintf("%s %s %s %s %s %s %s", sys.name, sys.node,
+				sys.release, sys.version, sys.machine,
+				sys.processor, sys.os))
+	}
+	if *printKernelname || *printKernelnameLong {
+		printArray = append(printArray, sys.name)
+	}
+	if *printNodename || *printNodenameLong {
+		printArray = append(printArray, sys.node)
+	}
+	if *printRelease || *printReleaseLong {
+		printArray = append(printArray, sys.release)
+	}
+	if *printVersion || *printVersionLong {
+		printArray = append(printArray, sys.version)
+	}
+	if *printMachine || *printMachineLong {
+		printArray = append(printArray, sys.machine)
+	}
+	if *printDomain || *printDomainLong {
+		printArray = append(printArray, sys.domain)
+	}
+	if *printOS || *printOSLong {
+		printArray = append(printArray, sys.os)
+	}
+	if *printProcessor || *printProcessorLong {
+		printArray = append(printArray, sys.processor)
+	}
+	return strings.Join(printArray, " ")
+}
+
 func main() {
+	sys := getSystemInfo()
+	fmt.Println(sys.unameString())
+}
+
+func init() {
 	flag.Parse()
 	if *help {
 		fmt.Println(help_text)
@@ -148,56 +202,4 @@ func main() {
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
-
-	// Obtain information about the system.
-	var utsname syscall.Utsname
-	_ = syscall.Uname(&utsname)
-	sysname := utsnameToString(utsname.Sysname)
-	nodename := utsnameToString(utsname.Nodename)
-	release := utsnameToString(utsname.Release)
-	version := utsnameToString(utsname.Version)
-	machine := utsnameToString(utsname.Machine)
-	domain := utsnameToString(utsname.Domainname)
-	osname := getOS()
-	processorname := getProcessorName()
-
-	if flag.NFlag() == 0 {
-		fmt.Println(sysname)
-		os.Exit(0)
-	}
-
-	// Store printing information in an array.
-	printArray := make([]string, 0)
-	if *printAll {
-		printArray = append(printArray,
-			fmt.Sprintf("%s %s %s %s %s %s %s", sysname, nodename,
-				release, version, machine, processorname, osname))
-	}
-	if *printKernelname || *printKernelnameLong {
-		printArray = append(printArray, sysname)
-	}
-	if *printNodename || *printNodenameLong {
-		printArray = append(printArray, nodename)
-	}
-	if *printRelease || *printReleaseLong {
-		printArray = append(printArray, release)
-	}
-	if *printVersion || *printVersionLong {
-		printArray = append(printArray, version)
-	}
-	if *printMachine || *printMachineLong {
-		printArray = append(printArray, machine)
-	}
-	if *printDomain || *printDomainLong {
-		printArray = append(printArray, domain)
-	}
-	if *printOS || *printOSLong {
-		printArray = append(printArray, osname)
-	}
-	if *printProcessor || *printProcessorLong {
-		printArray = append(printArray, processorname)
-	}
-
-	// Print the information.
-	fmt.Println(strings.Join(printArray, " "))
 }

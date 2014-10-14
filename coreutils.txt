@@ -61,7 +61,7 @@ printf
 *pwd
 readlink
 *rm
-rmdir
+*rmdir
 runcon
 seq
 *sha1sum
@@ -78,7 +78,7 @@ split
 stty
 su
 sum
-sync
+*sync
 tac
 *tail
 tee
