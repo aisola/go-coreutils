@@ -4,7 +4,7 @@ This is a Go1 implementation of the GNU Coreutils.
 
 All files are maintained by: Abram C. Isola
 
-[Go Coreutils Build](https://magnum-ci.com/status/3ebdc7894c138b7d57e3993c0b302747.png)
+![Go Coreutils Build](https://magnum-ci.com/status/3ebdc7894c138b7d57e3993c0b302747.png)
 
 ### Installation
 
