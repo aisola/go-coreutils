@@ -2,10 +2,11 @@
 // sync.go (go-coreutils) 0.1
 // Copyright (C) 2014, The GO-Coreutils Developers.
 //
-// Written By: Michael Murphy
+// Written By: Michael Murphy, Abram C. Isola
 //
 package main
 
+import "fmt"
 import "flag"
 import "syscall"
 
