@@ -124,7 +124,7 @@ func printTailingBytes(buffer []byte) {
 	totalBytes := len(buffer)
 	byteCount := totalBytes
 	if *bytesF < byteCount {
-		byteCount = *bytesF 
+		byteCount = *bytesF
 	}
 	for index := totalBytes - byteCount; index < totalBytes; index++ {
 		fmt.Print(string(buffer[index]))
