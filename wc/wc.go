@@ -199,21 +199,22 @@ func (wc *wcstat) printStats() {
 	}
 }
 
+// scanFile scans each file, line by line, gathering statistics using a scanner.
+func (wc *wcstat) scanFile(scanner *bufio.Scanner) {
+	for scanner.Scan() {
+		wc.getStats(scanner.Bytes())
+	}
+}
+
 func main() {
 	if flag.NArg() == 0 || flag.Arg(0) == "-" {
 		var wc wcstat
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			wc.getStats(scanner.Bytes())
-		}
+		wc.scanFile(bufio.NewScanner(os.Stdin))
 		wc.printStats()
 	} else {
 		for file := 0; file < flag.NArg(); file++ {
 			wc := wcstat{fileName: flag.Arg(file)}
-			scanner := bufio.NewScanner(openFile(flag.Arg(file)))
-			for scanner.Scan() {
-				wc.getStats(scanner.Bytes())
-			}
+			wc.scanFile(bufio.NewScanner(openFile(flag.Arg(file))))
 			wc.printStats()
 		}
 	}
