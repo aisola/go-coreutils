@@ -6,12 +6,13 @@
 //
 package main
 
+import "bufio"
 import "bytes"
 import "flag"
 import "fmt"
-import "io"
 import "os"
 import "strings"
+import "unicode/utf8"
 
 var (
 	countBytes              = flag.Bool("c", false, "Print the byte counts")
@@ -87,107 +88,134 @@ func openFile(s string) *os.File {
 	return fi
 }
 
-// maxStrLength loops through each line to find the longest line.
-func maxStrLength(buffer *bytes.Buffer) int {
-	var maxStringLength int
-	for _, line := range strings.Split(buffer.String(), "\n") {
-		if len(line) > maxStringLength {
-			maxStringLength = len(line)
-		}
-	}
-	return maxStringLength
-}
-
-// bufferToStringArray returns the buffer as a newline-separated string slice.
-func bufferToStringArray(buffer *bytes.Buffer) []string {
-	return strings.Split(buffer.String(), "\n")
-}
-
-// isEmpty checks if the line is empty, and returns true if true
-func isEmptyLine(line string) bool {
-	if len(line) < 1 {
-		return true
-	}
-	return false
-}
-
-/* removeSpacing removes tabs and spaces from the input line. This is useful
- * for properly detecting the correct SLOC. */
-func removeSpacing(line *string) {
-	*line = strings.Replace(*line, "\t", "", -1)
-	*line = strings.Replace(*line, " ", "", -1)
-}
-
-/* isCode checks if the line is code, and returns true if true. It is
- * currently optimized for counting SLOC in Go programs. */
-func isCode(line string) bool {
-	removeSpacing(&line)
-	prefix := strings.HasPrefix // make an alias for 'HasPrefix'
-	return prefix(line, "//") || prefix(line, " *") || prefix(line, "/*") ||
-		prefix(line, "*/") || prefix(line, "{") && len(line) == 1 ||
-		prefix(line, "}") && len(line) == 1 || prefix(line, ")") ||
-		prefix(line, "package") || prefix(line, "import") ||
-		prefix(line, "var (") || prefix(line, "const (")
-}
-
 // slocCounter counts the source lines of code
-func slocCounter(buffer *bytes.Buffer, count int) int {
-	for _, line := range bufferToStringArray(buffer) {
-		if !isEmptyLine(line) && !isCode(line) {
-			count++
-		}
+func slocCounter(buffer []byte, count int) int {
+	// Returns true if the input line is not an empty.
+	isNotEmpty := func(buffer []byte) bool {
+		return !(len(buffer) < 1)
+	}
+	// Returns true if the input line is a line of code
+	isCode := func(line string) bool {
+		line = strings.Replace(line, "\t", "", -1)
+		line = strings.Replace(line, " ", "", -1)
+		prefix := strings.HasPrefix // make an alias for 'HasPrefix'
+		return prefix(line, "//") || prefix(line, " *") ||
+			prefix(line, "/*") || prefix(line, "*/") ||
+			prefix(line, "{") && len(line) == 1 ||
+			prefix(line, "}") && len(line) == 1 ||
+			prefix(line, ")") || prefix(line, "package") ||
+			prefix(line, "import") || prefix(line, "var (") ||
+			prefix(line, "const (")
+	}
+	if isNotEmpty(buffer) && !isCode(string(buffer)) {
+		count++
 	}
 	return count
 }
 
 // occurrenceCounter counts the number of occurrences of occurrenceRef.
-func occurrenceCounter(buffer *bytes.Buffer) int {
-	return strings.Count(buffer.String(), *occurrenceRef)
+func occurrenceCounter(buffer []byte) int {
+	return bytes.Count(buffer, []byte(*occurrenceRef))
 }
 
-// lineCount returns the number of lines by splitting the buffer's newlines.
-func lineCount(buffer *bytes.Buffer) int {
-	return strings.Count(buffer.String(), "\n")
+// wordcount returns the number of words by splitting the buffer's fields.
+func wordCount(buffer []byte) int {
+	return len(strings.Fields(string(buffer)))
 }
 
-// wordcount returns the number of words by splitting the buffer's spaces/fields.
-func wordCount(buffer *bytes.Buffer) int {
-	return len(strings.Fields(buffer.String()))
+/* characterCount counts the number of characters in the bytes buffer by
+ * sending a bytes slice of the buffer to the RuneCount function in utf8. This
+ * gives support for non-ASCII characters that don't fit inside of a byte. */
+func characterCount(buffer []byte) int {
+	return utf8.RuneCount(buffer)
 }
 
-// bufferProcessor will print information relating to the input flag.
-func bufferProcessor(fileName string, buffer *bytes.Buffer) {
+// wcstat stores statistics for each file processsed by wc
+type wcstat struct {
+	bytes      int
+	characters int
+	lines      int
+	maxLength  int
+	words      int
+	sloc       int
+	occurences int
+	fileName   string
+}
+
+// maxLineLength determines the maximum line length for the entire file.
+// NOTE: GNU wc counts by bytes rather than by runes, which is not accurate. It
+// also does not correctly detect tabs, giving a false line length size.
+func (wc *wcstat) maxLineLength(buffer []byte) {
+	length := utf8.RuneCount(buffer)
+	if wc.maxLength < length {
+		wc.maxLength = length
+	}
+}
+
+// processStats will process the input buffer and append the obtained stats
+// to the wcstat struct.
+func (wc *wcstat) getStats(buffer []byte) {
 	switch {
 	case *countBytes || *countBytesL:
-		fmt.Println(buffer.Len(), fileName)
+		wc.bytes += len(buffer) + 1
 	case *countCharacters || *countCharactersL:
-		fmt.Println(buffer.Len(), fileName)
+		wc.characters += characterCount(buffer) + 1
 	case *countLines || *countLinesL:
-		fmt.Println(lineCount(buffer), fileName)
+		wc.lines++
 	case *maxLineLength || *maxLineLengthL:
-		fmt.Println(maxStrLength(buffer), fileName)
+		wc.maxLineLength(buffer)
 	case *countWords || *countWordsL:
-		fmt.Println(wordCount(buffer), fileName)
+		wc.words += wordCount(buffer)
 	case *countSLOC:
-		fmt.Println(slocCounter(buffer, 0), fileName)
+		wc.sloc += slocCounter(buffer, 0)
 	case len(*occurrenceRef) != 0: // Count occurences if not empty.
-		fmt.Println(occurrenceCounter(buffer), fileName)
+		wc.occurences += occurrenceCounter(buffer)
 	default: // Print all if no argument is given.
-		fmt.Println(lineCount(buffer), wordCount(buffer), buffer.Len(),
-			fileName)
+		wc.lines++
+		wc.words += wordCount(buffer)
+		wc.bytes += len(buffer)
+	}
+}
+
+// printStats prints the statistics for the current file.
+func (wc *wcstat) printStats() {
+	switch {
+	case *countBytes || *countBytesL:
+		fmt.Println(wc.bytes, wc.fileName)
+	case *countCharacters || *countCharactersL:
+		fmt.Println(wc.characters, wc.fileName)
+	case *countLines || *countLinesL:
+		fmt.Println(wc.lines, wc.fileName)
+	case *maxLineLength || *maxLineLengthL:
+		fmt.Println(wc.maxLength, wc.fileName)
+	case *countWords || *countWordsL:
+		fmt.Println(wc.words, wc.fileName)
+	case *countSLOC:
+		fmt.Println(wc.sloc, wc.fileName)
+	case len(*occurrenceRef) != 0: // Count occurences if not empty.
+		fmt.Println(wc.occurences, wc.fileName)
+	default: // Print all if no argument is given.
+		fmt.Println(wc.lines, wc.words, wc.bytes+wc.lines, wc.fileName)
+	}
+}
+
+// scanFile scans each file, line by line, gathering statistics using a scanner.
+func (wc *wcstat) scanFile(scanner *bufio.Scanner) {
+	for scanner.Scan() {
+		wc.getStats(scanner.Bytes())
 	}
 }
 
 func main() {
 	if flag.NArg() == 0 || flag.Arg(0) == "-" {
-		buffer := bytes.NewBuffer(nil) // create a buffer
-		io.Copy(buffer, os.Stdin)      // copy stdin into the buffer
-		bufferProcessor("", buffer)    // print the results
+		var wc wcstat
+		wc.scanFile(bufio.NewScanner(os.Stdin))
+		wc.printStats()
 	} else {
 		for file := 0; file < flag.NArg(); file++ {
-			buffer := bytes.NewBuffer(nil)
-			io.Copy(buffer, openFile(flag.Arg(file)))
-			bufferProcessor(flag.Arg(file), buffer)
+			wc := wcstat{fileName: flag.Arg(file)}
+			wc.scanFile(bufio.NewScanner(openFile(flag.Arg(file))))
+			wc.printStats()
 		}
 	}
 }
