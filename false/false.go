@@ -7,7 +7,7 @@
 package main
 
 import "flag"
-import "log"
+import "fmt"
 import "os"
 
 const (
@@ -40,11 +40,11 @@ func main() {
 	}
 
 	if *help {
-		log.Fatal(help_text)
+		fmt.Println(help_text)
 	}
 
 	if *version {
-		log.Fatal(version_text)
+		fmt.Println(version_text)
 	}
 	os.Exit(1)
 }
