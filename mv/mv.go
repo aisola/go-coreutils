@@ -17,9 +17,9 @@ const (
     Usage: mv [OPTION]... [PATH]... [PATH]
        or: mv [PATH] [PATH]
        or: mv [OPTION]
-    
+
     move or rename files or directories
-        
+
         --help        display this help and exit
         --version     output version information and exit
 
@@ -30,7 +30,7 @@ const (
 
     Copyright (C) 2014, The GO-Coreutils Developers.
     This program comes with ABSOLUTELY NO WARRANTY; for details see
-    LICENSE. This is free software, and you are welcome to redistribute 
+    LICENSE. This is free software, and you are welcome to redistribute
     it under certain conditions in LICENSE.
 `
 )
