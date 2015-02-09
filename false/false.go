@@ -7,14 +7,14 @@
 package main
 
 import "flag"
-import "log"
+import "fmt"
 import "os"
 
 const (
 	help_text = `
 	Usage: false
   	   or: false OPTION
-    
+
 	Exit with a status code indicating failure.
 
         --help     display this help and exit
@@ -25,7 +25,7 @@ const (
 
     Copyright (C) 2014, The GO-Coreutils Developers.
     This program comes with ABSOLUTELY NO WARRANTY; for details see
-    LICENSE. This is free software, and you are welcome to redistribute 
+    LICENSE. This is free software, and you are welcome to redistribute
     it under certain conditions in LICENSE.
 `
 )
@@ -40,11 +40,11 @@ func main() {
 	}
 
 	if *help {
-		log.Fatal(help_text)
+		fmt.Println(help_text)
 	}
 
 	if *version {
-		log.Fatal(version_text)
+		fmt.Println(version_text)
 	}
-	os.Exit(-1)
+	os.Exit(1)
 }
