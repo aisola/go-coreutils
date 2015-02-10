@@ -106,25 +106,40 @@ func mover(originalLocation, newLocation string) {
 			if fp2 := fileExists(newLocation + "/" + base); fp2 != nil && !*forceEnabled {
 				answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation+"/"+base)
 				if answer == "y\n" {
-					os.Rename(originalLocation, newLocation+"/"+base)
+					err := os.Rename(originalLocation, newLocation+"/"+base)
+					if err != nil {
+						fmt.Println(err)
+					}
 				} else {
 					os.Exit(0)
 				}
 			} else if fp2 != nil && *forceEnabled {
-				os.Rename(originalLocation, newLocation+"/"+base)
+				err := os.Rename(originalLocation, newLocation+"/"+base)
+				if err != nil {
+					fmt.Println(err)
+				}
 			} else if fp2 == nil {
-				os.Rename(originalLocation, newLocation+"/"+base)
+				err := os.Rename(originalLocation, newLocation+"/"+base)
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 		} else {
 			answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation)
 			if answer == "y\n" {
-				os.Rename(originalLocation, newLocation)
+				err := os.Rename(originalLocation, newLocation)
+				if err != nil {
+					fmt.Println(err)
+				}
 			} else {
 				os.Exit(0)
 			}
 		}
 	default: // If the destination file exists and forceEnabled is enabled,
-		os.Rename(originalLocation, newLocation) // or if the file does not exist, move it.
+		err := os.Rename(originalLocation, newLocation) // or if the file does not exist, move it.
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
