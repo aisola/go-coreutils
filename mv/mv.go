@@ -9,6 +9,7 @@ package main
 import "bufio"
 import "flag"
 import "fmt"
+import "io"
 import "os"
 import "path/filepath"
 
@@ -109,6 +110,10 @@ func mover(originalLocation, newLocation string) {
 					err := os.Rename(originalLocation, newLocation+"/"+base)
 					if err != nil {
 						fmt.Println(err)
+						err = move_across_devices(originalLocation, newLocation+"/"+base)
+						if err != nil {
+							fmt.Println(err)
+						}
 					}
 				} else {
 					os.Exit(0)
@@ -117,11 +122,19 @@ func mover(originalLocation, newLocation string) {
 				err := os.Rename(originalLocation, newLocation+"/"+base)
 				if err != nil {
 					fmt.Println(err)
+					err = move_across_devices(originalLocation, newLocation+"/"+base)
+					if err != nil {
+						fmt.Println(err)
+					}
 				}
 			} else if fp2 == nil {
 				err := os.Rename(originalLocation, newLocation+"/"+base)
 				if err != nil {
 					fmt.Println(err)
+					err = move_across_devices(originalLocation, newLocation+"/"+base)
+					if err != nil {
+						fmt.Println(err)
+					}
 				}
 			}
 		} else {
@@ -130,6 +143,10 @@ func mover(originalLocation, newLocation string) {
 				err := os.Rename(originalLocation, newLocation)
 				if err != nil {
 					fmt.Println(err)
+					err = move_across_devices(originalLocation, newLocation)
+					if err != nil {
+						fmt.Println(err)
+					}
 				}
 			} else {
 				os.Exit(0)
@@ -139,8 +156,42 @@ func mover(originalLocation, newLocation string) {
 		err := os.Rename(originalLocation, newLocation) // or if the file does not exist, move it.
 		if err != nil {
 			fmt.Println(err)
+			err = move_across_devices(originalLocation, newLocation)
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
+}
+
+func move_across_devices(originalLocation, newLocation string) error {
+	src, err := os.Open(originalLocation)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.Create(newLocation)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	size, err := io.Copy(dst, src)
+	if err != nil {
+		return err
+	}
+
+	srcStat, err := os.Stat(originalLocation)
+	if err != nil {
+		return err
+	}
+	if size != srcStat.Size() {
+		os.Remove(newLocation)
+		return fmt.Errorf("Error, file was not copied completely")
+	}
+	os.Remove(originalLocation)
+	return nil
 }
 
 func main() {
