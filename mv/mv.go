@@ -107,61 +107,47 @@ func mover(originalLocation, newLocation string) {
 			if fp2 := fileExists(newLocation + "/" + base); fp2 != nil && !*forceEnabled {
 				answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation+"/"+base)
 				if answer == "y\n" {
-					err := os.Rename(originalLocation, newLocation+"/"+base)
-					if err != nil {
-						fmt.Println(err)
-						err = move_across_devices(originalLocation, newLocation+"/"+base)
-						if err != nil {
-							fmt.Println(err)
-						}
-					}
+					try_move(originalLocation, newLocation+"/"+base)
 				} else {
 					os.Exit(0)
 				}
 			} else if fp2 != nil && *forceEnabled {
-				err := os.Rename(originalLocation, newLocation+"/"+base)
-				if err != nil {
-					fmt.Println(err)
-					err = move_across_devices(originalLocation, newLocation+"/"+base)
-					if err != nil {
-						fmt.Println(err)
-					}
-				}
+				try_move(originalLocation, newLocation+"/"+base)
 			} else if fp2 == nil {
-				err := os.Rename(originalLocation, newLocation+"/"+base)
-				if err != nil {
-					fmt.Println(err)
-					err = move_across_devices(originalLocation, newLocation+"/"+base)
-					if err != nil {
-						fmt.Println(err)
-					}
-				}
+				try_move(originalLocation, newLocation+"/"+base)
 			}
 		} else {
 			answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation)
 			if answer == "y\n" {
-				err := os.Rename(originalLocation, newLocation)
-				if err != nil {
-					fmt.Println(err)
-					err = move_across_devices(originalLocation, newLocation)
-					if err != nil {
-						fmt.Println(err)
-					}
-				}
+				try_move(originalLocation, newLocation)
 			} else {
 				os.Exit(0)
 			}
 		}
 	default: // If the destination file exists and forceEnabled is enabled,
-		err := os.Rename(originalLocation, newLocation) // or if the file does not exist, move it.
-		if err != nil {
-			fmt.Println(err)
-			err = move_across_devices(originalLocation, newLocation)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
+		try_move(originalLocation, newLocation) // or if the file does not exist, move it.
 	}
+}
+
+func try_move(originalLocation, newLocation string) error {
+	err := os.Rename(originalLocation, newLocation)
+	switch t := err.(type) {
+	case *os.LinkError:
+		fmt.Printf("Cross-device move. Copying instead\n")
+		return move_across_devices(originalLocation, newLocation)
+	case *os.PathError:
+		fmt.Printf("Path error: %q\n", t)
+		return err
+	case *os.SyscallError:
+		fmt.Printf("Syscall error: %q\n", t)
+		return err
+	case nil:
+		return nil
+	default:
+		fmt.Printf("Unkown error Type: %T Error: %q", t, t)
+		return err
+	}
+	return nil
 }
 
 func move_across_devices(originalLocation, newLocation string) error {
