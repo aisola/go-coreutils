@@ -9,6 +9,7 @@ package main
 import "bufio"
 import "flag"
 import "fmt"
+import "io"
 import "os"
 import "path/filepath"
 
@@ -17,9 +18,9 @@ const (
     Usage: mv [OPTION]... [PATH]... [PATH]
        or: mv [PATH] [PATH]
        or: mv [OPTION]
-    
+
     move or rename files or directories
-        
+
         --help        display this help and exit
         --version     output version information and exit
 
@@ -30,7 +31,7 @@ const (
 
     Copyright (C) 2014, The GO-Coreutils Developers.
     This program comes with ABSOLUTELY NO WARRANTY; for details see
-    LICENSE. This is free software, and you are welcome to redistribute 
+    LICENSE. This is free software, and you are welcome to redistribute
     it under certain conditions in LICENSE.
 `
 )
@@ -106,26 +107,77 @@ func mover(originalLocation, newLocation string) {
 			if fp2 := fileExists(newLocation + "/" + base); fp2 != nil && !*forceEnabled {
 				answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation+"/"+base)
 				if answer == "y\n" {
-					os.Rename(originalLocation, newLocation+"/"+base)
+					try_move(originalLocation, newLocation+"/"+base)
 				} else {
 					os.Exit(0)
 				}
 			} else if fp2 != nil && *forceEnabled {
-				os.Rename(originalLocation, newLocation+"/"+base)
+				try_move(originalLocation, newLocation+"/"+base)
 			} else if fp2 == nil {
-				os.Rename(originalLocation, newLocation+"/"+base)
+				try_move(originalLocation, newLocation+"/"+base)
 			}
 		} else {
 			answer := input("File '%s' exists. Overwrite? (y/N): ", newLocation)
 			if answer == "y\n" {
-				os.Rename(originalLocation, newLocation)
+				try_move(originalLocation, newLocation)
 			} else {
 				os.Exit(0)
 			}
 		}
 	default: // If the destination file exists and forceEnabled is enabled,
-		os.Rename(originalLocation, newLocation) // or if the file does not exist, move it.
+		try_move(originalLocation, newLocation) // or if the file does not exist, move it.
 	}
+}
+
+func try_move(originalLocation, newLocation string) error {
+	err := os.Rename(originalLocation, newLocation)
+	switch t := err.(type) {
+	case *os.LinkError:
+		fmt.Printf("Cross-device move. Copying instead\n")
+		return move_across_devices(originalLocation, newLocation)
+	case *os.PathError:
+		fmt.Printf("Path error: %q\n", t)
+		return err
+	case *os.SyscallError:
+		fmt.Printf("Syscall error: %q\n", t)
+		return err
+	case nil:
+		return nil
+	default:
+		fmt.Printf("Unkown error Type: %T Error: %q", t, t)
+		return err
+	}
+	return nil
+}
+
+func move_across_devices(originalLocation, newLocation string) error {
+	src, err := os.Open(originalLocation)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.Create(newLocation)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	size, err := io.Copy(dst, src)
+	if err != nil {
+		return err
+	}
+
+	srcStat, err := os.Stat(originalLocation)
+	if err != nil {
+		return err
+	}
+	if size != srcStat.Size() {
+		os.Remove(newLocation)
+		return fmt.Errorf("Error, file was not copied completely")
+	}
+	os.Remove(originalLocation)
+	return nil
 }
 
 func main() {
