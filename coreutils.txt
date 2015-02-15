@@ -31,7 +31,7 @@ expand
 *false
 fmt
 fold
-groups
+*groups
 *head
 hostid
 id
