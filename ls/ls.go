@@ -5,8 +5,7 @@
 // Written By: Michael Murphy, Abram C. Isola
 //
 
-// +build linux
-
+// +build linux darwin
 
 /* TODO:
  * Add (t), sort by modification time, newest first.
@@ -16,19 +15,21 @@
  */
 package main
 
-import "fmt"
-import "io/ioutil"
-import "os"
-import "os/exec"
-import "strings"
-import "flag"
-import "unsafe"
-import "runtime"
-import "syscall"
-import "time"
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
+	"syscall"
+	"time"
+
+	flag "github.com/ogier/pflag"
+	"golang.org/x/crypto/ssh/terminal"
+)
 
 const ( // Constant variables used throughout the program.
-	TERMINAL_INFO    = 0x5413         // Used in the getTerminalWidth function
 	EXECUTABLE       = 0111           // File executable bit
 	SYMLINK          = os.ModeSymlink // Symlink bit
 	CYAN_SYMLINK     = "\x1b[36;1m"   // Cyan terminal color
@@ -39,32 +40,12 @@ const ( // Constant variables used throughout the program.
 	DATE_FORMAT      = "Jan _2 15:04" // Format date
 	DATE_YEAR_FORMAT = "Jan _2  2006" // If the file is from a previous year
 
-	help_text string = `
+	help_text = `
     Usage: ls [OPTION]...
-    
+
     list files and directories in working directory
+    `
 
-        --help        display this help and exit
-        --version     output version information and exit
-
-        -a    include hidden files and directories
-        
-        -d, -directory
-              list only directories and not their contents
-        
-        -h, -human-readable
-              with -l, print sizes in human readable format
-
-        -l    use a long listing format
-        
-        -n, -numeric-uid-gid
-              list numeric uid/gid's instead of names
-
-        -r, -reverse
-              reverse order while sorting
-              
-        -1    list in a single column
-`
 	version_text = `
     ls (go-coreutils) 0.1
 
@@ -79,34 +60,30 @@ var ( // Default flags and variables.
 	help            = flag.Bool("help", false, "display help information")
 	version         = flag.Bool("version", false, "display version information")
 	showHidden      = flag.Bool("a", false, "list hidden files and directories")
-	dirOnly         = flag.Bool("d", false, "list only directories and not their contents")
-	dirOnlyLong     = flag.Bool("directory", false, "list only directories and not their contents")
-	human           = flag.Bool("h", false, "print sizes in human-readable format")
-	humanLong       = flag.Bool("human-readable", false, "print sizes in human-readable format")
+	dirOnly         = flag.BoolP("directory", "d", false, "list only directories and not their contents")
+	human           = flag.BoolP("human-readable", "h", false, "print sizes in human-readable format")
 	longMode        = flag.Bool("l", false, "use a long listing format")
-	numericIDs      = flag.Bool("n", false, "list numeric uid/gid's instead of names.")
-	numericIDsLong  = flag.Bool("numeric-uid-gid", false, "list numeric uid/gid's instead of names.")
-	reversed        = flag.Bool("r", false, "reverse order while sorting")
-	reversedLong    = flag.Bool("reverse", false, "reverse order while sorting")
+	numericIDs      = flag.BoolP("numeric-uid-gid", "n", false, "list numeric uid/gid's instead of names.")
+	reversed        = flag.BoolP("reverse", "r", false, "reverse order while sorting")
 	singleColumn    = flag.Bool("1", false, "list files by one column")
-	printOneLine    = true                    // list in a single columnlist in a single columnets whether or not to print on one row.
-	terminalWidth   = int(getTerminalWidth()) // Grabs information on the current terminal width.
-	maxIDLength     = 0                       // Statistics for the longest id name length.
-	maxSizeLength   = 0                       // Statistics for the longest file size length.
-	totalCharLength = 0                       // Statistics for the total number of characters.
-	maxCharLength   = 0                       // Statistics for maximum file name length.
-	maxColumns      = 0                       // Statistics for the maximum number of columns
-	numOfRows       = 0                       // Statistics for the maximum number of rows.
-	numOfFiles      = 0                       // Statistics for the number of files.
-	lastRowCount    = 0                       // The number of files on the last row.
-	printOrder      = make([]int, 0)          // The printing order.
-	fileList        = make([]os.FileInfo, 0)  // A list of all files being processed
-	fileLengthList  = make([]int, 0)          // A list of file character lengths
-	fileModeList    = make([]string, 0)       // A list of file mode strings
-	fileUserList    = make([]string, 0)       // A list of user values
-	fileGroupList   = make([]string, 0)       // A list of group values
-	fileModDateList = make([]string, 0)       // A list of file modication times.
-	fileSizeList    = make([]string, 0)       // A list of file sizes.
+	printOneLine    = true                   // list in a single columnlist in a single columnets whether or not to print on one row.
+	terminalWidth   = getTerminalWidth()     // Grabs information on the current terminal width.
+	maxIDLength     = 0                      // Statistics for the longest id name length.
+	maxSizeLength   = 0                      // Statistics for the longest file size length.
+	totalCharLength = 0                      // Statistics for the total number of characters.
+	maxCharLength   = 0                      // Statistics for maximum file name length.
+	maxColumns      = 0                      // Statistics for the maximum number of columns
+	numOfRows       = 0                      // Statistics for the maximum number of rows.
+	numOfFiles      = 0                      // Statistics for the number of files.
+	lastRowCount    = 0                      // The number of files on the last row.
+	printOrder      = make([]int, 0)         // The printing order.
+	fileList        = make([]os.FileInfo, 0) // A list of all files being processed
+	fileLengthList  = make([]int, 0)         // A list of file character lengths
+	fileModeList    = make([]string, 0)      // A list of file mode strings
+	fileUserList    = make([]string, 0)      // A list of user values
+	fileGroupList   = make([]string, 0)      // A list of group values
+	fileModDateList = make([]string, 0)      // A list of file modication times.
+	fileSizeList    = make([]string, 0)      // A list of file sizes.
 )
 
 // Check initial state of flags.
@@ -114,39 +91,23 @@ func processFlags() {
 	flag.Parse()
 	if *help {
 		fmt.Println(help_text)
+		flag.PrintDefaults()
 		os.Exit(0)
 	}
 	if *version {
 		fmt.Println(version_text)
 		os.Exit(0)
 	}
-	if *humanLong {
-		*human = true
-	}
-	if *reversedLong {
-		*reversed = true
-	}
-	if *numericIDsLong {
-		*numericIDs = true
-	}
-}
-
-// Stores information regarding the terminal size.
-type termsize struct {
-	Row, Col, Xpixel, Ypixel uint16
 }
 
 // Obtains the current width of the terminal.
-func getTerminalWidth() uint {
-	ws := &termsize{}
-	retCode, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
-		uintptr(syscall.Stdin),
-		uintptr(TERMINAL_INFO),
-		uintptr(unsafe.Pointer(ws)))
-	if int(retCode) == -1 {
-		panic(errno)
+func getTerminalWidth() int {
+	width, _, err := terminal.GetSize(0)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get terminal size, use default value 80")
+		return 80
 	}
-	return uint(ws.Col)
+	return width
 }
 
 // Displays error messages
