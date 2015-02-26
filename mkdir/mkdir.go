@@ -7,10 +7,11 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	flag "github.com/ogier/pflag"
 )
 
 const (
@@ -46,7 +47,7 @@ const (
 var (
 	help    = flag.Bool("help", false, help_text)
 	version = flag.Bool("version", false, version_text)
-	parents = flag.Bool("parents", false, parents_text)
+	parents = flag.BoolP("parents", "p", false, parents_text)
 	verbose = flag.Bool("verbose", false, verbose_text)
 )
 
