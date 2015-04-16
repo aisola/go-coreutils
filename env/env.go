@@ -49,6 +49,7 @@ var (
 )
 
 func setenv(name, value string) {
+	os.Setenv(name, value)
 	for i := 0; i < len(environ); i++ {
 		e := strings.SplitN(environ[i], "=", 2)
 		if e[0] == name {
@@ -59,6 +60,7 @@ func setenv(name, value string) {
 	environ = append(environ, name+"="+value)
 }
 func unsetenv(name string) {
+	os.Unsetenv(name)
 	for i := 0; i < len(environ); {
 		e := strings.SplitN(environ[i], "=", 2)
 		if e[0] == name && len(e) == 2 {
@@ -104,7 +106,13 @@ func main() {
 				setenv(e[0], e[1])
 			} else {
 				// run COMMAND
+				if optNullTerminateOutput {
+					fmt.Println("env: cannot specify --null (-0) with command: No such file or directory")
+					fmt.Println("Try 'env --help' for more information.")
+					os.Exit(1)
+				}
 				cmd := exec.Command(arg[i], arg[i+1:]...)
+				cmd.Stdin = os.Stdin
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				cmd.Env = environ
@@ -125,7 +133,7 @@ func main() {
 	// print all Environment
 	for _, s := range environ {
 		if optNullTerminateOutput {
-			fmt.Print(s + string('\000'))
+			fmt.Printf("%v%c", s, '\000')
 		} else {
 			fmt.Println(s)
 		}
