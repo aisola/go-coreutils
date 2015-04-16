@@ -24,7 +24,7 @@ dircolors
 *dirname
 du
 *echo
-env
+*env
 expand
 *expr
 *factor
