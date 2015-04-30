@@ -7,7 +7,6 @@
 
 // +build linux
 
-
 package main
 
 import "bytes"

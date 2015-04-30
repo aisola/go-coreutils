@@ -7,7 +7,6 @@
 
 // +build linux
 
-
 /* TODO:
  * Add (t), sort by modification time, newest first.
  * Add (s, size), print the allocated size of each file, in blocks.
