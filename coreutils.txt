@@ -81,7 +81,7 @@ sum
 *sync
 tac
 *tail
-tee
+*tee
 *touch
 test
 timeout
