@@ -12,7 +12,7 @@ chown
 chmod
 chroot
 cksum
-comm
+*comm
 cp
 csplit
 cut
