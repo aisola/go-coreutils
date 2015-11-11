@@ -6,9 +6,9 @@
 //
 package main
 
+import "errors"
 import "flag"
 import "fmt"
-import "io"
 import "os"
 import "syscall"
 
@@ -47,10 +47,7 @@ var (
 // MODIFIED FROM THE os.RemoveAll() implimentation
 // RemoveAll removes all files/directories below
 // and prompts if the option is set.
-func RemoveAll(path string) error {
-	var answer string
-	var err error
-
+func RemoveAll(path string) (err error) {
 	// Is this a directory we need to recurse into?
 	dir, serr := os.Lstat(path)
 	if serr != nil {
@@ -60,137 +57,81 @@ func RemoveAll(path string) error {
 		return serr
 	}
 
-	if !dir.IsDir() {
-		// Not a directory;
-		if *interactivei {
-			fmt.Printf("rm: do you want to remove '%s'? (y/N) ", path)
-			_, err = fmt.Scanln(&answer)
-			if err != nil {
-				return err
-			}
+	// remove complete dir
+	if dir.IsDir() {
+		return removeDir(path)
+	}
 
-			if answer == "y" || answer == "yes" {
-				os.Remove(path)
-			}
-		} else {
-			os.Remove(path)
-		}
-
+	// remove file
+	if *interactivei && !yesOrNo("rm: do you want to remove '%s'? (y/N) " + path) {
 		return nil
 	}
 
-	// Turns out, it's a directory...
+	return os.Remove(path)
+}
+
+func removeDir(path string) (err error) {
 	if !*recursiveR && !*recursiver && !*recursive {
-		fmt.Printf("rm: '%s' is a directory\n", path)
+		return errors.New(fmt.Sprintf("rm: '%s' is a directory", path))
+	}
+
+	if *interactivei && !yesOrNo("rm: descend into directory '%s'? (y/N) " + path) {
 		return nil
 	}
 
-	if *interactivei {
-		fmt.Printf("rm: descend into directory '%s'? (y/N) ", path)
-		_, err = fmt.Scanln(&answer)
-		if err != nil {
-			return err
-		}
-
-		if answer == "y" || answer == "yes" {
-
-			fd, err := os.Open(path)
-			if err != nil {
-				return err
-			}
-
-			// Remove contents & return first error.
-			err = nil
-			for {
-				names, err1 := fd.Readdirnames(100)
-				for _, name := range names {
-					err1 := RemoveAll(path + string(os.PathSeparator) + name)
-					if err == nil {
-						err = err1
-					}
-				}
-				if err1 == io.EOF {
-					break
-				}
-				// If Readdirnames returned an error, use it.
-				if err == nil {
-					err = err1
-				}
-				if len(names) == 0 {
-					break
-				}
-			}
-
-			// Close directory, because windows won't remove opened directory.
-			fd.Close()
-
-		} else {
-			return nil
-		}
-
-	} else {
-		fd, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-
-		// Remove contents & return first error.
-		err = nil
-		for {
-			names, err1 := fd.Readdirnames(100)
-			for _, name := range names {
-				err1 := RemoveAll(path + string(os.PathSeparator) + name)
-				if err == nil {
-					err = err1
-				}
-			}
-			if err1 == io.EOF {
-				break
-			}
-			// If Readdirnames returned an error, use it.
-			if err == nil {
-				err = err1
-			}
-			if len(names) == 0 {
-				break
-			}
-		}
-
-		// Close directory, because windows won't remove opened directory.
-		fd.Close()
+	fd, err := os.Open(path)
+	if err != nil {
+		return err
 	}
 
-	if *interactivei {
+	// Remove contents.
+	names, err := fd.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
 
-		fmt.Printf("rm: remove '%s'? (y/N) ", path)
-		_, err := fmt.Scanln(&answer)
+	for _, name := range names {
+		if *interactivei && !yesOrNo("rm: remove '%s'? (y/N)" + path) {
+			continue
+		}
+
+		err := RemoveAll(path + string(os.PathSeparator) + name)
 		if err != nil {
 			return err
-		}
-
-		if answer == "y" || answer == "yes" {
-			// Remove directory.
-			err1 := os.Remove(path)
-			if err == nil {
-				err = err1
-			}
-		}
-
-	} else {
-		// Remove directory.
-		err1 := os.Remove(path)
-		if err == nil {
-			err = err1
 		}
 	}
 
-	return err
+	// Close directory, because windows won't remove opened directory.
+	// and by the way it's always a good idea to close stuff you're done with
+	fd.Close()
+
+	// Remove directory.
+	return os.Remove(path)
+}
+
+// return true on "y" and "yes"; otherwise false
+func yesOrNo(question string) bool {
+	var answer string
+
+	fmt.Println(question)
+	_, err := fmt.Scanln(&answer)
+	if err != nil {
+		goto out
+	}
+
+	if answer == "y" || answer == "yes" {
+		return true
+	}
+
+out:
+	return false
 }
 
 func main() {
 	help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	flag.Parse()
+	exitCode := 0
 
 	if *help {
 		fmt.Println(help_text)
@@ -204,6 +145,12 @@ func main() {
 
 	files := flag.Args()
 	for i := 0; i < len(files); i++ {
-		RemoveAll(files[i])
+		err := RemoveAll(files[i])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, err.Error() + "\n")
+			exitCode = 1
+		}
 	}
+
+	os.Exit(exitCode)
 }
