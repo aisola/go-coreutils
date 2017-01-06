@@ -8,12 +8,12 @@
 package main
 
 import "bytes"
-import "flag"
 import "fmt"
 import "io"
 import "io/ioutil"
 import "os"
 import "strings"
+import flag "github.com/ogier/pflag"
 
 const (
 	help_text string = `
@@ -53,8 +53,7 @@ the Kth
 var (
 	help        = flag.Bool("help", false, help_text)
 	version     = flag.Bool("version", false, version_text)
-	lines       = flag.Int("n", 10, lines_text)
-	linesLong   = flag.Int("lines", 10, lines_text)
+	lines       = flag.Int64P("lines", "n", 10, lines_text)
 	bytesF      = flag.Int("c", 0, bytes_text)
 	bytesFLong  = flag.Int("bytes", 0, bytes_text)
 	silent      = flag.Bool("q", false, silent_text)
@@ -103,8 +102,8 @@ func multiFileByteProcessor() {
 
 /* splitAndCountLines splits the buffered string into a newline-deliminted
  * string slice and returns the slice along with the line count. */
-func splitAndCountLines(buffer string) ([]string, int) {
-	return strings.Split(buffer, "\n"), strings.Count(buffer, "\n")
+func splitAndCountLines(buffer string) ([]string, int64) {
+	return strings.Split(buffer, "\n"), int64(strings.Count(buffer, "\n"))
 }
 
 // printTailingLines prints the last N lines from the input buffer.
@@ -173,9 +172,6 @@ func main() {
 
 func init() {
 	flag.Parse()
-	if *linesLong != 10 {
-		*lines = *linesLong
-	}
 	if *silentLong || *silentLong2 {
 		*silent = true
 	}
